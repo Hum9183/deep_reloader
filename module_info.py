@@ -54,6 +54,12 @@ class ModuleInfo:
 
         # リロード完了をログ出力（ログレベルで制御）
         logger.info(f'RELOADED {name}')
+        
+        # TODO: より詳細なリロード情報のログ出力
+        # - モジュールのファイルパス、サイズ、最終更新時刻
+        # - リロード前後での属性・関数の変更差分
+        # - 依存関係の深度レベル表示
+        # - リロード所要時間の計測
 
         # 子を再帰的にリロード
         for child in self.children:
@@ -62,6 +68,12 @@ class ModuleInfo:
     def overwrite_symbols(self) -> None:
         """
         from-import シンボルを親モジュールに上書き（葉から順）
+        
+        TODO: シンボル上書き処理の詳細ログ追加
+        - 上書きされるシンボルの一覧（名前、型、古い値→新しい値）
+        - シンボルコピーの失敗ケースとその理由
+        - ネストレベルと処理順序の視覚化
+        - 競合や循環参照の検出・警告
         """
         # 子を先に処理（葉 → 根）
         for child in self.children:

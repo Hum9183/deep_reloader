@@ -15,13 +15,46 @@ from typing import Callable
 # def make_temp_package(tmp_path: Path, package_structure: dict) -> None:
 #     """
 #     辞書で定義されたパッケージ構造を一括作成
-#     
+#
 #     Args:
 #         tmp_path: 一時ディレクトリのPath
 #         package_structure: パッケージ構造を定義した辞書
 #                           例: {'pkg': {'__init__.py': '', 'mod.py': 'x=1'}}
 #     """
 #     # 実装予定
+
+# TODO: 循環インポートエラーの対応
+# 現在、循環インポート（A → B → A のような相互依存）が存在するモジュール構造では
+# deep_reloaderがエラーになることが判明している。
+#
+# 問題:
+# - 循環インポートのあるモジュールをリロードしようとするとエラーが発生
+# - 依存関係の解析時に無限ループに陥る可能性
+#
+# 対策案:
+# 1. 循環依存の検出機能を追加
+# 2. 循環が検出された場合の適切なエラーハンドリング
+# 3. 循環インポートを安全にリロードするアルゴリズムの実装
+# 4. 循環インポートのテストケース追加
+#
+# 優先度: 高（実用性に大きく影響）
+
+# TODO: import文対応の追加
+# 現在はfrom-import形式（from module import something）のみ対応しており、
+# import文形式（import module）の依存関係は解析されない制限がある。
+#
+# 問題:
+# - import module 形式の依存関係が見落とされる
+# - 完全な依存関係の把握ができない
+# - ユーザーが混乱する可能性（一部のインポートのみ対応）
+#
+# 対策案:
+# 1. AST解析でimport文も検出するよう拡張
+# 2. import文での依存関係もModuleInfoツリーに追加
+# 3. import文用のテストケース追加
+# 4. ドキュメントの更新
+#
+# 優先度: 中（機能の完全性向上）
 
 
 def setup_package_parent_path(test_file_path: str) -> None:
@@ -114,7 +147,7 @@ def run_test_as_script(test_function: Callable[[Path], None], test_file_path: st
     - 例外処理とテスト結果の表示（pytestのレポート機能）
 
     これにより、pytestとスクリプト実行の両方で同じテストロジックが動作する
-    デュアル実行アーキテクチャを実現する。
+    テストアーキテクチャを実現する。
 
     Args:
         test_function: 実行するテスト関数
