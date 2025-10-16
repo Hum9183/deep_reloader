@@ -72,9 +72,9 @@ def test_multilevel_relative_import(tmp_path):
     )
 
     # deep reloadを実行
-    import deep_reloader as dr
+    from deep_reloader import deep_reload
 
-    dr.DeepReloader().reload(deep_module)
+    deep_reload(deep_module)
 
     # 更新された値を確認
     new_deep_module = importlib.import_module('level1.level2.level3.deep_module')

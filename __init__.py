@@ -1,11 +1,10 @@
-from ._metadata import __version__, __author__
-
-from .deep_reloader import DeepReloader
-from .module_info import ModuleInfo
-from .imported_symbols import ImportedSymbols
-from .symbol_extractor import SymbolExtractor
-
 import logging
+
+from ._metadata import __author__, __version__
+from .deep_reloader import deep_reload
+from .imported_symbols import ImportedSymbols
+from .module_info import ModuleInfo
+from .symbol_extractor import SymbolExtractor
 
 
 def setup_logging(log_level: int = logging.INFO) -> logging.Logger:
@@ -36,7 +35,7 @@ def setup_logging(log_level: int = logging.INFO) -> logging.Logger:
 
 
 __all__ = [
-    'DeepReloader',
+    'deep_reload',
     'setup_logging',
     'ModuleInfo',
     'ImportedSymbols',

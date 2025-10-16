@@ -69,9 +69,9 @@ def test_parent_level_relative_import(tmp_path):
     )
 
     # deep reloadを実行
-    import deep_reloader as dr
+    from deep_reloader import deep_reload
 
-    dr.DeepReloader().reload(worker)
+    deep_reload(worker)
 
     # 更新された値を確認
     new_worker = importlib.import_module('rootpkg.subpkg.worker')

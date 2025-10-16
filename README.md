@@ -1,7 +1,7 @@
 # deep_reloader
 
 > [!WARNING]
-> このソフトウェアは現在プレリリース版（v0.1.1）です。APIが変更される可能性があります。
+> このソフトウェアは現在プレリリース版（v0.2.0）です。APIが変更される可能性があります。
 
 Pythonモジュールの依存関係を解析して、再帰的に再読み込みを行うライブラリです。特にMayaでのスクリプト開発時に、モジュール変更を即座に反映させるために設計されています。
 
@@ -27,14 +27,9 @@ Pythonモジュールの依存関係を解析して、再帰的に再読み込�
 ### 基本的な使用方法
 
 ```python
-# 基本的な使用方法
-import deep_reloader
-dr = deep_reloader.DeepReloader()
-dr.reload(your_module)
-
-# from-import での使用方法
-from deep_reloader import DeepReloader
-DeepReloader().reload(your_module)
+# 最もシンプルな使用例
+from deep_reloader import deep_reload
+deep_reload(your_module)
 ```
 
 ### ログ設定
@@ -42,7 +37,7 @@ DeepReloader().reload(your_module)
 開発時やデバッグ時には、詳細なログ出力を有効にできます：
 
 ```python
-from deep_reloader import DeepReloader, setup_logging
+from deep_reloader import deep_reload, setup_logging
 import logging
 
 # ログレベルを設定（すべてのdeep_reloaderログに影響）
@@ -52,8 +47,7 @@ logger = setup_logging(logging.DEBUG)   # 詳細なデバッグ情報
 logger.info("deep_reloaderのログ設定が完了しました")
 
 # その後、通常通り使用
-reloader = DeepReloader()
-reloader.reload(your_module)
+deep_reload(your_module)
 ```
 
 **ログレベルの説明:**
@@ -138,7 +132,7 @@ python -m pytest deep_reloader/tests/ -vv
 
 ## バージョン情報
 
-**現在のバージョン**: v0.1.1 (Pre-release)
+**現在のバージョン**: v0.2.0 (Pre-release)
 
 ### リリース状況
 - ✅ コア機能実装完了（from-import対応）
