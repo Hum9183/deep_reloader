@@ -66,9 +66,9 @@ def test_same_level_relative_import(tmp_path):
     )
 
     # deep reloadを実行
-    import deep_reloader as dr
+    from deep_reloader import deep_reload
 
-    dr.DeepReloader().reload(main)
+    deep_reload(main)
 
     # 更新された値を確認
     new_main = importlib.import_module('mypackage.main')

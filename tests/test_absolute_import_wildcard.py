@@ -51,9 +51,9 @@ def test_wildcard_from_import_reload(tmp_path):
     )
 
     # deep reloadを実行
-    import deep_reloader as dr
+    from deep_reloader import deep_reload
 
-    dr.DeepReloader().reload(b)
+    deep_reload(b)
 
     # 更新された値を確認
     new_b = importlib.import_module('b')

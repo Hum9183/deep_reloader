@@ -5,7 +5,7 @@ test_utils.pyの機能をラップしてpytest fixtureとして提供する。
 スクリプト実行時はtest_utilsを直接使用するため、このファイルをインポートする必要はない。
 """
 
-import pytest
+import pytest  # type: ignore  # noqa: F401
 
 from .test_utils import clear_test_environment
 

@@ -41,9 +41,9 @@ def test_simple_from_import_reload(tmp_path):
     (tmp_path / 'a.py').write_text('x = 999\n', encoding='utf-8')
 
     # deep reloadを実行
-    import deep_reloader as dr
+    from deep_reloader import deep_reload
 
-    dr.DeepReloader().reload(b)
+    deep_reload(b)
 
     # 更新された値を確認
     new_b = importlib.import_module('b')
