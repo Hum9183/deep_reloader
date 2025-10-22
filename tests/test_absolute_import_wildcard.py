@@ -2,9 +2,9 @@ import importlib
 import textwrap
 
 try:
-    from .test_utils import make_temp_module
+    from .test_utils import create_test_modules, update_module
 except ImportError:
-    from test_utils import make_temp_module
+    from test_utils import create_test_modules, update_module
 
 
 def test_wildcard_from_import_reload(tmp_path):
@@ -13,41 +13,35 @@ def test_wildcard_from_import_reload(tmp_path):
     """
 
     # テスト用モジュールを作成
-    make_temp_module(
+    modules_dir = create_test_modules(
         tmp_path,
-        'a',
-        textwrap.dedent(
-            """
-            x = 1
-            y = 2
-            """
-        ),
+        {
+            'a.py': textwrap.dedent(
+                """
+                x = 1
+                y = 2
+                """
+            ),
+            'b.py': textwrap.dedent(
+                """
+                from a import *
+                """
+            ),
+        },
     )
-    make_temp_module(
-        tmp_path,
-        'b',
-        textwrap.dedent(
-            """
-            from a import *
-            """
-        ),
-    )
-
-    import a  # noqa: F401  # type: ignore
     import b  # type: ignore
 
     assert b.x == 1
     assert b.y == 2
 
     # a.pyを書き換えて値を変更
-    (tmp_path / 'a.py').write_text(
-        textwrap.dedent(
-            """
+    update_module(
+        modules_dir,
+        'a.py',
+        """
         x = 100
         y = 200
-    """
-        ),
-        encoding='utf-8',
+        """,
     )
 
     # deep reloadを実行

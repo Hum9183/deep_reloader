@@ -2,9 +2,9 @@ import importlib
 import textwrap
 
 try:
-    from .test_utils import add_temp_path_to_sys, make_temp_module
+    from .test_utils import create_test_modules, update_module
 except ImportError:
-    from test_utils import add_temp_path_to_sys, make_temp_module
+    from test_utils import create_test_modules, update_module
 
 
 def test_same_level_relative_import(tmp_path):
@@ -13,56 +13,43 @@ def test_same_level_relative_import(tmp_path):
     """
 
     # パッケージ構造を作成
-    package_dir = tmp_path / 'mypackage'
-    package_dir.mkdir()
+    modules_dir = create_test_modules(
+        tmp_path,
+        {
+            'utils.py': textwrap.dedent(
+                """
+                helper_value = 42
 
-    # __init__.py を作成
-    (package_dir / '__init__.py').write_text('', encoding='utf-8')
+                def helper_func():
+                    return "original"
+                """
+            ),
+            'main.py': textwrap.dedent(
+                """
+                from .utils import helper_value, helper_func
 
-    # utils.py を作成
-    (package_dir / 'utils.py').write_text(
-        textwrap.dedent(
-            """
-            helper_value = 42
-
-            def helper_func():
-                return "original"
-            """
-        ),
-        encoding='utf-8',
+                def get_result():
+                    return f"{helper_value}-{helper_func()}"
+                """
+            ),
+        },
+        package_name='mypackage',
     )
-
-    # main.py を作成 (from .utils import helper_value, helper_func)
-    (package_dir / 'main.py').write_text(
-        textwrap.dedent(
-            """
-            from .utils import helper_value, helper_func
-
-            def get_result():
-                return f"{helper_value}-{helper_func()}"
-            """
-        ),
-        encoding='utf-8',
-    )
-
-    # sys.pathに一時ディレクトリを追加
-    add_temp_path_to_sys(tmp_path)
 
     from mypackage import main  # noqa: F401  # type: ignore
 
     assert main.get_result() == "42-original"
 
     # utils.pyを書き換えて値を変更
-    (package_dir / 'utils.py').write_text(
-        textwrap.dedent(
-            """
-            helper_value = 999
+    update_module(
+        modules_dir,
+        'utils.py',
+        """
+        helper_value = 999
 
-            def helper_func():
-                return "updated"
-            """
-        ),
-        encoding='utf-8',
+        def helper_func():
+            return "updated"
+        """,
     )
 
     # deep reloadを実行

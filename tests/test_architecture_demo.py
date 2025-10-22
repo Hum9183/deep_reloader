@@ -37,7 +37,7 @@ try-except文による相対インポートと絶対インポートの自動切�
 - pytest: パッケージ構造の自動認識
   * パッケージの親から実行 (`python -m pytest deep_reloader/tests/test_xxx.py`)
   * テストファイルパスでパッケージ名が明示され、複数パッケージ環境で識別が容易
-- 両方式共通: make_temp_module()による一時ディレクトリの自動追加とクリーンアップ
+- 両方式共通: create_test_modules()による一時ディレクトリの自動追加とクリーンアップ
 
 【3. フィクスチャ互換性】
 - スクリプト: tempfile.TemporaryDirectory()
@@ -74,13 +74,13 @@ try:
     # 実行コマンド例:
     # cd c:\Users\jiang\OneDrive\ドキュメント\maya\scripts\deep_reloader
     # python tests/test_architecture_demo.py
-    from test_utils import make_temp_module
+    from test_utils import create_test_modules, update_module
 except ImportError:
     # pytest実行時（パッケージとして認識される）
     # 実行コマンド例:
     # cd c:\Users\jiang\OneDrive\ドキュメント\maya\scripts
     # python -m pytest deep_reloader/tests/test_architecture_demo.py
-    from .test_utils import make_temp_module
+    from .test_utils import create_test_modules, update_module
 
 
 def test_architecture_demonstration(tmp_path):
@@ -105,38 +105,77 @@ def test_architecture_demonstration(tmp_path):
     # ここにテストの本体を記述します
     # スクリプト実行・pytest実行のどちらでも同じコードが動作します
 
-    # 一時モジュールの作成
-    # make_temp_module()はtest_utils.pyで定義されたヘルパー関数
+    # 一時モジュールの作成（依存関係のあるモジュール構成）
+    # create_test_modules()はtest_utils.pyで定義されたヘルパー関数
     # 自動的にsys.pathに一時ディレクトリが追加されます
-    make_temp_module(
+    modules_dir = create_test_modules(
         tmp_path,
-        'demo_module',
-        textwrap.dedent(
-            """
-            # このモジュールは一時ディレクトリに作成されます
-            MESSAGE = "テストが正常に動作しています"
-            VERSION = "1.0.0"
+        {
+            'config.py': textwrap.dedent(
+                """
+                # 設定モジュール（依存される側）
+                APP_NAME = "DemoApp"
+                VERSION = "1.0.0"
+                """
+            ),
+            'utils.py': textwrap.dedent(
+                """
+                # ユーティリティモジュール（config に依存）
+                from config import APP_NAME, VERSION
 
-            def get_info():
-                return f"{MESSAGE} (Version: {VERSION})"
-            """
-        ),
+                def get_app_info():
+                    return f"{APP_NAME} v{VERSION}"
+                """
+            ),
+            'main.py': textwrap.dedent(
+                """
+                # メインモジュール（utils に依存）
+                from utils import get_app_info
+
+                def show_info():
+                    return f"Running: {get_app_info()}"
+                """
+            ),
+        },
+    )
+    # create_test_modules()により自動的にsys.pathが設定されているため直接インポート可能
+    import main  # type: ignore
+
+    # アサーションによる検証（初期値）
+    assert main.show_info() == "Running: DemoApp v1.0.0"
+
+    # 依存元のconfig.pyを更新
+    # update_module()を使ってモジュールの内容を書き換えます
+    update_module(
+        modules_dir,
+        'config.py',
+        """
+        # 設定モジュール（更新版）
+        APP_NAME = "UpdatedApp"
+        VERSION = "2.5.0"
+        """,
     )
 
-    # モジュールのインポートとテスト
-    # make_temp_module()により自動的にsys.pathが設定されているため直接インポート可能
-    import demo_module  # type: ignore
+    # 通常のimportlib.reload()では依存関係が更新されない
+    # deep_reload()を使うことで、依存チェーンをすべてリロード
+    from deep_reloader import deep_reload
 
-    # アサーションによる検証
-    assert demo_module.MESSAGE == "テストが正常に動作しています"
-    assert demo_module.VERSION == "1.0.0"
-    assert "テストが正常に動作しています" in demo_module.get_info()
+    deep_reload(main)
+
+    # リロード後の値を確認
+    # config.pyの変更がutils.py、main.pyまで伝播していることを確認
+    import importlib
+
+    new_main = importlib.import_module('main')
+    assert new_main.show_info() == "Running: UpdatedApp v2.5.0"
 
     # 実行方式の検出と表示
     # この情報により、どちらの方式で実行されているかが分かります
     execution_method = _detect_execution_method()
     print(f"実行方式: {execution_method}")
-    print(f"テスト結果: {demo_module.get_info()}")
+    print(f"更新前: Running: DemoApp v1.0.0")
+    print(f"更新後: {new_main.show_info()}")
+    print("※ deep_reload()により依存チェーン(config -> utils -> main)がすべて更新されました")
 
     # 成功メッセージ
     print("OK: テスト実行デモンストレーション成功")

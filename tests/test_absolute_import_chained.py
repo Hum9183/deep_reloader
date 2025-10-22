@@ -2,9 +2,9 @@ import importlib
 import textwrap
 
 try:
-    from .test_utils import make_temp_module
+    from .test_utils import create_test_modules, update_module
 except ImportError:
-    from test_utils import make_temp_module
+    from test_utils import create_test_modules, update_module
 
 
 def test_chained_from_import_reload(tmp_path):
@@ -13,35 +13,27 @@ def test_chained_from_import_reload(tmp_path):
     """
 
     # テスト用モジュールを作成
-    make_temp_module(
+    modules_dir = create_test_modules(
         tmp_path,
-        'a',
-        textwrap.dedent(
-            """
-            value = 1
-            """
-        ),
+        {
+            'a.py': textwrap.dedent(
+                """
+                value = 1
+                """
+            ),
+            'b.py': textwrap.dedent(
+                """
+                from a import value
+                """
+            ),
+            'c.py': textwrap.dedent(
+                """
+                from b import value
+                """
+            ),
+        },
     )
-    make_temp_module(
-        tmp_path,
-        'b',
-        textwrap.dedent(
-            """
-            from a import value
-            """
-        ),
-    )
-    make_temp_module(
-        tmp_path,
-        'c',
-        textwrap.dedent(
-            """
-            from b import value
-            """
-        ),
-    )
-
-    import a  # noqa: F401  # type: ignore
+    import a  # type: ignore
     import b  # type: ignore
     import c  # type: ignore
 
@@ -50,7 +42,7 @@ def test_chained_from_import_reload(tmp_path):
     assert c.value == 1
 
     # a.pyを書き換えて値を変更
-    (tmp_path / 'a.py').write_text('value = 777\n', encoding='utf-8')
+    update_module(modules_dir, 'a.py', 'value = 777')
 
     # deep reloadを実行（c からスタート）
     from deep_reloader import deep_reload
