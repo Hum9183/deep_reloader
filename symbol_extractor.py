@@ -14,28 +14,18 @@ class SymbolExtractor:
     """
     モジュールのASTを解析して、from-import文の「子モジュール」と「インポートされるシンボル」を抽出するクラス
 
-    from-import文で参照される子モジュールと、インポートされるシンボル名のペアを
-    (ModuleType, ImportedSymbols) の形式で返す。
+    子モジュールと、インポートされるシンボル名のペアを(ModuleType, ImportedSymbols)で表現する。
 
     例: from math import sin, cos → (math_module, ImportedSymbols(['sin', 'cos']))
         この場合、mathが子モジュール、sin・cosがインポートされるシンボル
     """
+
     def __init__(self, module: ModuleType) -> None:
-        self.module = module
-        # TODO: AST解析のパフォーマンス最適化
-        # - 解析結果のキャッシュ（モジュールのタイムスタンプベース）
-        # - 頻繁にアクセスされるモジュールの優先キャッシュ
-        # - メモリ効率的なキャッシュ管理（LRU、サイズ制限）
+        self.module: ModuleType = module
         self.tree: Optional[ast.AST] = self._parse_ast()
 
     def extract(self) -> List[Tuple[ModuleType, ImportedSymbols]]:
-        """(子モジュール, インポートされたシンボル) のリストを返す
-        
-        TODO: 組み込みモジュール（os、sys、pathlib等）やサードパーティライブラリ
-        （maya.cmds、PySide6、numpy等）の判定とスキップ処理を実装する。
-        これらのモジュールはリロード不要かつ危険な場合があるため、
-        安全なモジュールのみを対象とする仕組みが必要。
-        """
+        """(子モジュール, インポートされたシンボル) のリストを返す"""
         if self.tree is None:
             return []
 
@@ -46,14 +36,7 @@ class SymbolExtractor:
                 # 無効な依存関係を除外: 存在しないモジュール(None)と自分自身への参照
                 if child_module is None or child_module is self.module:
                     continue
-                
-                # TODO: ここで組み込み・サードパーティモジュールのスキップ判定を追加
-                # 例: if self._should_skip_module(child_module): continue
-                # 判定ロジック案:
-                # - sys.builtin_module_names による組み込みモジュール判定
-                # - __file__ 属性の有無とパスによるサードパーティ判定
-                # - 設定可能なブラックリスト/ホワイトリスト
-                
+
                 symbols = self._extract_symbols(child_module, node)
                 results.append((child_module, symbols))
         return results
@@ -64,10 +47,12 @@ class SymbolExtractor:
             source = inspect.getsource(self.module)
             return ast.parse(source)
         except (OSError, TypeError, SyntaxError):
+            # 組み込みモジュール(os, sys等)、バイナリ拡張(.pyd/.so)、
+            # Maya内部モジュール(maya.cmds等)はソースコードが取得できないためNoneを返す
             return None
 
     def _resolve_imported_module(self, stmt: ast.ImportFrom) -> Optional[ModuleType]:
-        """ImportFromノードから実際の子モジュールを解決（相対対応）"""
+        """ImportFromノードからインポート対象のモジュールを取得"""
         try:
             if stmt.level > 0:
                 # 相対インポートを絶対パスに変換
@@ -105,23 +90,3 @@ class SymbolExtractor:
                     if attr_name.startswith('__') is False:  # __name__, __file__ 等の特殊属性を除外
                         public_attrs.append(attr_name)
                 return ImportedSymbols(public_attrs)
-
-    # TODO: 将来の実装用メソッド - 組み込み・サードパーティモジュールの判定
-    # def _should_skip_module(self, module: ModuleType) -> bool:
-    #     """モジュールをスキップすべきかどうかを判定する
-    #     
-    #     Args:
-    #         module: 判定対象のモジュール
-    #         
-    #     Returns:
-    #         True: スキップすべき（組み込み・サードパーティモジュール）
-    #         False: リロード対象（ユーザー作成モジュール）
-    #         
-    #     判定ロジック案:
-    #     1. sys.builtin_module_names による組み込みモジュール判定
-    #     2. __file__ が None の場合（C拡張モジュール等）
-    #     3. site-packages パス内のモジュール判定
-    #     4. maya.* パッケージの特別扱い
-    #     5. 設定可能なブラックリスト/ホワイトリスト
-    #     """
-    #     pass

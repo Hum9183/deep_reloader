@@ -16,15 +16,34 @@ def deep_reload(module: ModuleType) -> None:
 
     Maya開発でのモジュール変更を即座に反映させるために設計されています。
 
+    リロード後、引数で渡されたモジュールオブジェクトの内容が自動的に更新されるため、
+    戻り値を受け取る必要はありません。
+
     Args:
         module: リロード対象のモジュール
 
     Note:
         ログレベルの設定には setup_logging() 関数を使用してください。
         例: setup_logging(logging.DEBUG)
+
+    Example:
+        ```python
+        from mypackage import main
+        from deep_reloader import deep_reload
+
+        deep_reload(main)  # mainの中身が自動的に更新される
+        main.restart()     # 新しいコードが実行される
+        ```
     """
     # キャッシュを無効化して .py の変更を認識させる
     importlib.invalidate_caches()
+
+    # ターゲットパッケージ名を自動推定
+    module_name = module.__name__
+    if '.' in module_name:
+        target_package = module_name.split('.')[0]
+    else:
+        target_package = module_name
 
     # TODO: パフォーマンス最適化 - ファイル変更検出による差分リロード
     # - ファイルのタイムスタンプキャッシュで変更検出
@@ -37,43 +56,47 @@ def deep_reload(module: ModuleType) -> None:
     # - 依存関係ツリーの視覚的表示（階層構造、インデント付き）
     # - 各モジュールの詳細情報（パス、サイズ、最終更新時刻）
     # - スキップされるモジュールの理由と一覧
-    root = _build_tree(module)
+    visited = set()  # 循環インポート検出用
+    root = _build_tree(module, visited, target_package)
 
     # ツリー全体の __pycache__ を削除
     _clear_pycache_recursive(root)
 
-    # 親→子へリロード
-    # TODO: リロード順序とプロセスの詳細ログ追加
-    # - 各モジュールのリロード開始/完了タイミング
-    # - リロード中のエラーとリカバリ状況
-    # - パフォーマンス情報（各段階の実行時間）
+    # リロード
     root.reload()
 
-    # 子→親へシンボルをコピー（from-import で取得したシンボルを親モジュールに反映）
-    # TODO: シンボルコピー処理の詳細ログ追加
-    # - コピーされるシンボルの詳細（名前、型、ソース）
-    # - シンボルの競合や上書き状況
-    # - 失敗したシンボルとその理由
-    root.overwrite_symbols()
 
-
-def _build_tree(module: ModuleType) -> ModuleInfo:
+def _build_tree(module: ModuleType, visited: set, target_package: str) -> ModuleInfo:
     """
     AST 解析して ModuleInfo ツリーを構築
 
-    TODO: 組み込みモジュール（os、pathlib等）やサードパーティライブラリ（maya.cmds、PySide6等）の
-    スキップ処理を実装する必要がある。現在は全ての依存関係をリロード対象としているため、
-    不要なリロードや潜在的な危険性がある。
+    Args:
+        module: 解析対象のモジュール
+        visited: 循環インポート検出用の訪問済みモジュールセット
+        target_package: リロード対象のパッケージ名（例: 'routinerecipe'）
+                       このパッケージに属するモジュールのみをリロード対象とする
+
+    Note:
+        target_packageに一致しないモジュール（組み込みモジュールやサードパーティライブラリ、その他の自作パッケージ）は
+        スキップされ、リロード対象から除外されます。
     """
-
-    # 念のため sys.modules から最新の正規モジュールを取得する
-    module = sys.modules[module.__name__]
-
     node = ModuleInfo(module)
+
+    # 循環インポート検出: すでに訪問済みなら子の展開はスキップ（無限ループ防止）
+    # ただし、ノード自体は作成してリロード対象には含める
+    if module.__name__ in visited:
+        return node
+
+    visited.add(module.__name__)
 
     extractor = SymbolExtractor(module)
     for child_module, symbols in extractor.extract():
-        child_node = _build_tree(child_module)
+        # ターゲットパッケージに属するモジュールのみをツリーに追加
+        if not child_module.__name__.startswith(target_package):
+            logger.debug(f'Skipped module (not in target package): {child_module.__name__}')
+            continue
+
+        child_node = _build_tree(child_module, visited, target_package)
         child_node.symbols = symbols
         node.children.append(child_node)
 
@@ -106,50 +129,3 @@ def _clear_single_pycache(module: ModuleType) -> None:
             logger.debug(f'Cleared pycache {pycache_dir}')
         except Exception as e:
             logger.warning(f'Failed to clear pycache {pycache_dir}: {e!r}')
-
-
-# TODO: 将来の実装用メソッド - デバッグ情報の出力機能
-# def _print_tree_structure(root: ModuleInfo, level: int = 0) -> None:
-#     """依存関係ツリーを視覚的に表示する
-#
-#     出力例:
-#     my_package.main
-#     ├── my_package.utils (from utils import helper, calculator)
-#     │   └── my_package.math_utils (from .math_utils import add, subtract)
-#     ├── my_package.config (from .config import settings)
-#     └── os [SKIPPED: builtin module]
-#     """
-#     pass
-#
-# def _log_reload_summary(root: ModuleInfo) -> None:
-#     """リロード処理の概要を詳細ログ出力
-#
-#     出力内容:
-#     - 処理開始/終了時刻
-#     - 総モジュール数、リロード対象数、スキップ数
-#     - 各段階の所要時間（ツリー構築、リロード、シンボルコピー）
-#     - 検出されたエラーや警告の統計
-#     """
-#     pass
-#
-# TODO: 将来の実装用 - パフォーマンス最適化キャッシュシステム
-# def _init_cache_system() -> None:
-#     """キャッシュシステムの初期化
-#
-#     キャッシュ対象:
-#     - ファイルタイムスタンプ（変更検出用）
-#     - AST解析結果（重いパース処理の削減）
-#     - 依存関係ツリー（構造変更時のみ再構築）
-#     - モジュール判定結果（組み込み/サードパーティ判定キャッシュ）
-#     """
-#     pass
-#
-# def _should_reload_module(module: ModuleType) -> bool:
-#     """モジュールがリロード必要かキャッシュベースで判定
-#
-#     判定基準:
-#     - ファイルタイムスタンプの変更
-#     - 依存関係の変更
-#     - 強制リロードフラグ
-#     """
-#     pass

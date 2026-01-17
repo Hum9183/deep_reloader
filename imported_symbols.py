@@ -1,17 +1,13 @@
-from typing import List, Iterator, Optional
 import logging
+from typing import Iterator, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class ImportedSymbols:
-    """モジュールから親モジュールへコピーされるシンボル集合を保持する軽量コンテナ。
+    """親モジュールが子モジュールからインポートしたシンボル名のリストを管理するクラス"""
 
-    logging:
-        シンボルコピーの詳細ログはDEBUGレベルで出力されます。
-        ログレベルは DeepReloader の verbose パラメータで制御してください。
-    """
-    def __init__(self, names: Optional[List[str]]=None) -> None:
+    def __init__(self, names: Optional[List[str]] = None) -> None:
         """ImportedSymbolsを初期化する。
 
         Args:

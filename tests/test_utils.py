@@ -2,26 +2,7 @@ import importlib
 import sys
 import tempfile
 from pathlib import Path
-from typing import Callable
-
-# TODO: パッケージ構築ユーティリティ関数の追加
-# make_temp_module()と同様に、パッケージ構造を簡単に作成するためのユーティリティ関数を追加する。
-# 現在はテストファイルごとにディレクトリ作成、__init__.py作成、sys.path追加を手動で行っているが、
-# これを自動化する関数が必要。
-# 例: make_temp_package(tmp_path, package_structure) のような関数で、
-# 辞書やYAMLで構造を定義して一括作成できるようにする。
-#
-# 実装例:
-# def make_temp_package(tmp_path: Path, package_structure: dict) -> None:
-#     """
-#     辞書で定義されたパッケージ構造を一括作成
-#
-#     Args:
-#         tmp_path: 一時ディレクトリのPath
-#         package_structure: パッケージ構造を定義した辞書
-#                           例: {'pkg': {'__init__.py': '', 'mod.py': 'x=1'}}
-#     """
-#     # 実装予定
+from typing import Callable, Dict, Optional
 
 # TODO: 循環インポートエラーの対応
 # 現在、循環インポート（A → B → A のような相互依存）が存在するモジュール構造では
@@ -103,37 +84,116 @@ def add_temp_path_to_sys(tmp_path: Path) -> None:
 
     Note:
         重複チェック付きでsys.pathに追加します。
-        単一モジュール作成（make_temp_module）とパッケージ構造作成の両方で使用できます。
     """
     tmp_path_str = str(tmp_path)
     if tmp_path_str not in sys.path:
         sys.path.insert(0, tmp_path_str)
 
 
-def make_temp_module(tmp_path: Path, name: str, content: str) -> Path:
+def create_test_modules(tmp_path: Path, structure: Dict[str, str], package_name: Optional[str] = None) -> Path:
     """
-    指定されたディレクトリに一時モジュールを作成し、自動的にsys.pathに追加
+    辞書で定義されたテストモジュール構造を一括作成し、sys.pathに自動追加
 
     Args:
         tmp_path: 一時ディレクトリのPath
-        name: モジュール名（拡張子なし）
-        content: モジュールの内容
+        structure: モジュール構造を定義した辞書
+                  キー: ファイル名（相対パス）
+                  値: ファイルの内容
+                  例: {'__init__.py': '', 'module_a.py': 'x=1', 'sub/mod.py': 'y=2'}
+        package_name: パッケージ名。Noneの場合はtmp_path直下にファイルを作成（パッケージなし）
 
     Returns:
-        作成されたファイルのPath
+        パッケージディレクトリのPath（package_nameがNoneの場合はtmp_path）
 
-    Note:
-        add_temp_path_to_sys()を内部で呼び出して自動的にsys.pathに追加します。
-        これにより、テストコード内でsys.path.insert()を毎回書く必要がなくなります。
+    Example:
+        >>> # パッケージとして作成
+        >>> pkg_dir = create_test_modules(
+        ...     tmp_path,
+        ...     {
+        ...         '__init__.py': '',
+        ...         'module_a.py': 'x = 1',
+        ...         'sub/__init__.py': '',
+        ...         'sub/module_b.py': 'y = 2',
+        ...     },
+        ...     package_name='my_package',
+        ... )
+        >>> import my_package.module_a
+        >>>
+        >>> # パッケージなし（tmp_path直下にファイル作成）
+        >>> modules_dir = create_test_modules(
+        ...     tmp_path,
+        ...     {
+        ...         'a.py': 'x = 1',
+        ...         'b.py': 'y = 2',
+        ...     },
+        ... )
+        >>> import a  # 直接インポート可能
     """
-    # ファイル作成
-    path = tmp_path / f'{name}.py'
-    path.write_text(content, encoding='utf-8')
+    # モジュール配置ディレクトリを決定
+    if package_name is None:
+        # パッケージなし: tmp_path直下に作成
+        modules_dir = tmp_path
+    else:
+        # パッケージあり: tmp_path/package_name/に作成
+        modules_dir = tmp_path / package_name
+        modules_dir.mkdir(parents=True, exist_ok=True)
+
+    # 構造に従ってファイルを作成
+    for file_path_str, content in structure.items():
+        file_path = modules_dir / file_path_str
+
+        # 親ディレクトリを作成（サブパッケージ対応）
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # ファイルを作成
+        file_path.write_text(content, encoding='utf-8')
+
+    # __init__.pyが明示的に指定されていない場合、空の__init__.pyを作成
+    # ただし、package_nameがNoneの場合（パッケージなし）は作成しない
+    if package_name is not None:
+        init_file = modules_dir / '__init__.py'
+        if '__init__.py' not in structure and not init_file.exists():
+            init_file.write_text('', encoding='utf-8')
 
     # sys.pathに一時ディレクトリを自動追加
     add_temp_path_to_sys(tmp_path)
 
-    return path
+    return modules_dir
+
+
+def update_module(modules_dir: Path, filename: str, content: str) -> None:
+    """
+    ディレクトリ内のモジュールファイルを更新
+
+    Args:
+        modules_dir: create_test_modules()の戻り値（モジュール群のディレクトリPath）
+        filename: 更新するファイル名（相対パス）
+        content: 新しいファイル内容（自動的にdedentされる）
+
+    Example:
+        >>> # パッケージの場合
+        >>> pkg_dir = create_test_modules(
+        ...     tmp_path,
+        ...     {'utils.py': 'x = 1'},
+        ...     package_name='mypackage',
+        ... )
+        >>> update_module(pkg_dir, 'utils.py', '''
+        ...     x = 999
+        ...     def new_func():
+        ...         return x
+        ... ''')
+        >>>
+        >>> # パッケージなしの場合
+        >>> modules_dir = create_test_modules(
+        ...     tmp_path,
+        ...     {'utils.py': 'x = 1'},
+        ... )
+        >>> update_module(modules_dir, 'utils.py', 'x = 999')
+    """
+    import textwrap
+
+    file_path = modules_dir / filename
+    file_path.write_text(textwrap.dedent(content), encoding='utf-8')
 
 
 def run_test_as_script(test_function: Callable[[Path], None], test_file_path: str) -> None:
@@ -164,7 +224,7 @@ def run_test_as_script(test_function: Callable[[Path], None], test_file_path: st
 
     Example:
         >>> def test_my_function(tmp_path):
-        ...     make_temp_module(tmp_path, 'test', 'x = 1')
+        ...     modules = create_test_modules(tmp_path, None, {'test.py': 'x = 1'})
         ...     # テストコード（pytestと同じ形式）
         >>>
         >>> if __name__ == "__main__":
@@ -184,16 +244,16 @@ def run_test_as_script(test_function: Callable[[Path], None], test_file_path: st
 
             # テスト実行
             test_function(tmp_path)
-            print("OK: テスト成功！")
+            print('OK: テスト成功！')
 
     except (AssertionError, ImportError, ModuleNotFoundError, AttributeError) as e:
-        print(f"NG: テスト失敗: {e}")
+        print(f'NG: テスト失敗: {e}')
         raise
     except OSError as e:
-        print(f"NG: ファイルシステムエラー: {e}")
+        print(f'NG: ファイルシステムエラー: {e}')
         raise
     except Exception as e:
-        print(f"NG: 予期しないエラー: {e}")
+        print(f'NG: 予期しないエラー: {e}')
         raise
     finally:
         # テスト後のクリーンアップ
