@@ -111,6 +111,7 @@ def test_architecture_demonstration(tmp_path):
     modules_dir = create_test_modules(
         tmp_path,
         {
+            '__init__.py': '',
             'config.py': textwrap.dedent(
                 """
                 # 設定モジュール（依存される側）
@@ -121,7 +122,7 @@ def test_architecture_demonstration(tmp_path):
             'utils.py': textwrap.dedent(
                 """
                 # ユーティリティモジュール（config に依存）
-                from config import APP_NAME, VERSION
+                from .config import APP_NAME, VERSION
 
                 def get_app_info():
                     return f"{APP_NAME} v{VERSION}"
@@ -130,19 +131,20 @@ def test_architecture_demonstration(tmp_path):
             'main.py': textwrap.dedent(
                 """
                 # メインモジュール（utils に依存）
-                from utils import get_app_info
+                from .utils import get_app_info
 
                 def show_info():
                     return f"Running: {get_app_info()}"
                 """
             ),
         },
+        package_name='test_package',
     )
     # create_test_modules()により自動的にsys.pathが設定されているため直接インポート可能
-    import main  # type: ignore
+    import test_package.main  # type: ignore
 
     # アサーションによる検証（初期値）
-    assert main.show_info() == "Running: DemoApp v1.0.0"
+    assert test_package.main.show_info() == "Running: DemoApp v1.0.0"
 
     # 依存元のconfig.pyを更新
     # update_module()を使ってモジュールの内容を書き換えます
@@ -160,13 +162,13 @@ def test_architecture_demonstration(tmp_path):
     # deep_reload()を使うことで、依存チェーンをすべてリロード
     from deep_reloader import deep_reload
 
-    deep_reload(main)
+    deep_reload(test_package.main)
 
     # リロード後の値を確認
     # config.pyの変更がutils.py、main.pyまで伝播していることを確認
     import importlib
 
-    new_main = importlib.import_module('main')
+    new_main = importlib.import_module('test_package.main')
     assert new_main.show_info() == "Running: UpdatedApp v2.5.0"
 
     # 実行方式の検出と表示

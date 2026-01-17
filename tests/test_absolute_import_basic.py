@@ -12,10 +12,11 @@ def test_simple_from_import_reload(tmp_path):
     シンプルなfrom-importの更新テスト
     """
 
-    # テスト用モジュールを作成
+    # テスト用パッケージを作成
     modules_dir = create_test_modules(
         tmp_path,
         {
+            '__init__.py': '',
             'a.py': textwrap.dedent(
                 """
                 x = 1
@@ -23,14 +24,15 @@ def test_simple_from_import_reload(tmp_path):
             ),
             'b.py': textwrap.dedent(
                 """
-                from a import x
+                from .a import x
                 """
             ),
         },
+        package_name='test_package',
     )
-    import b  # type: ignore
+    import test_package.b  # type: ignore
 
-    assert b.x == 1
+    assert test_package.b.x == 1
 
     # a.pyを書き換えて値を変更
     update_module(modules_dir, 'a.py', 'x = 999')
@@ -38,10 +40,10 @@ def test_simple_from_import_reload(tmp_path):
     # deep reloadを実行
     from deep_reloader import deep_reload
 
-    deep_reload(b)
+    deep_reload(test_package.b)
 
     # 更新された値を確認
-    new_b = importlib.import_module('b')
+    new_b = importlib.import_module('test_package.b')
     assert new_b.x == 999
 
 
