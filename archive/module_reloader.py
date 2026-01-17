@@ -17,8 +17,8 @@ from typing import Any, Dict, List, Tuple, cast
 __package_name = ''
 
 
-def deep_reload(module: ModuleType) -> None:
-    """module_reloaderの実装をベースとしたdeep_reload
+def module_reloader(module: ModuleType) -> None:
+    """deep_reloaderの初期型
 
     Args:
         module: リロード対象のモジュール
