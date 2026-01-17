@@ -115,8 +115,8 @@ def test_architecture_demonstration(tmp_path):
             'config.py': textwrap.dedent(
                 """
                 # 設定モジュール（依存される側）
-                APP_NAME = "DemoApp"
-                VERSION = "1.0.0"
+                APP_NAME = 'DemoApp'
+                VERSION = '1.0.0'
                 """
             ),
             'utils.py': textwrap.dedent(
@@ -144,7 +144,7 @@ def test_architecture_demonstration(tmp_path):
     import test_package.main  # type: ignore
 
     # アサーションによる検証（初期値）
-    assert test_package.main.show_info() == "Running: DemoApp v1.0.0"
+    assert test_package.main.show_info() == 'Running: DemoApp v1.0.0'
 
     # 依存元のconfig.pyを更新
     # update_module()を使ってモジュールの内容を書き換えます
@@ -153,8 +153,8 @@ def test_architecture_demonstration(tmp_path):
         'config.py',
         """
         # 設定モジュール（更新版）
-        APP_NAME = "UpdatedApp"
-        VERSION = "2.5.0"
+        APP_NAME = 'UpdatedApp'
+        VERSION = '2.5.0'
         """,
     )
 
@@ -169,7 +169,7 @@ def test_architecture_demonstration(tmp_path):
     import importlib
 
     new_main = importlib.import_module('test_package.main')
-    assert new_main.show_info() == "Running: UpdatedApp v2.5.0"
+    assert new_main.show_info() == 'Running: UpdatedApp v2.5.0'
 
     # 実行方式の検出と表示
     # この情報により、どちらの方式で実行されているかが分かります
@@ -197,24 +197,24 @@ def _detect_execution_method():
     # pytestが実行中かどうかを判定
     # pytest実行時は'pytest'モジュールがsys.modulesに存在する
     if 'pytest' in sys.modules:
-        return "pytest"
+        return 'pytest'
 
     # __main__モジュールの__file__属性から判定
     main_module = sys.modules.get('__main__')
     if main_module and hasattr(main_module, '__file__'):
         main_file = main_module.__file__
         if main_file and 'test_architecture_demo.py' in main_file:
-            return "script"
+            return 'script'
 
-    return "unknown"
+    return 'unknown'
 
 
 # === このテスト設計の実装例 ===
-# このif __name__ == "__main__":ブロックは、テスト設計の
+# このif __name__ == '__main__':ブロックは、テスト設計の
 # 核心部分です。スクリプト実行時のみ実行され、pytestのインフラストラクチャを
 # 手動で再現します。
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     """
     スクリプト実行時のエントリーポイント
 

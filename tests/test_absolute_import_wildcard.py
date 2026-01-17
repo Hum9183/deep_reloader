@@ -57,7 +57,7 @@ def test_wildcard_from_import_reload(tmp_path):
     assert new_b.y == 200
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     from test_utils import run_test_as_script
 
     run_test_as_script(test_wildcard_from_import_reload, __file__)

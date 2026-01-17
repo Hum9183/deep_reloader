@@ -244,16 +244,16 @@ def run_test_as_script(test_function: Callable[[Path], None], test_file_path: st
 
             # テスト実行
             test_function(tmp_path)
-            print("OK: テスト成功！")
+            print('OK: テスト成功！')
 
     except (AssertionError, ImportError, ModuleNotFoundError, AttributeError) as e:
-        print(f"NG: テスト失敗: {e}")
+        print(f'NG: テスト失敗: {e}')
         raise
     except OSError as e:
-        print(f"NG: ファイルシステムエラー: {e}")
+        print(f'NG: ファイルシステムエラー: {e}')
         raise
     except Exception as e:
-        print(f"NG: 予期しないエラー: {e}")
+        print(f'NG: 予期しないエラー: {e}')
         raise
     finally:
         # テスト後のクリーンアップ

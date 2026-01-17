@@ -21,7 +21,7 @@ def show_maya_warning():
     """Maya環境での実行時の警告メッセージを表示"""
     print(
         textwrap.dedent(
-            """
+        """
         警告: Maya環境での test_runner 実行が検出されました
         セーフティ機能により実行を停止します。
 

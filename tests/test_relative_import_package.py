@@ -18,10 +18,10 @@ def test_package_level_relative_import(tmp_path):
         {
             '__init__.py': textwrap.dedent(
                 """
-                package_version = "1.0.0"
+                package_version = '1.0.0'
 
                 def package_info():
-                    return f"Package version: {package_version}"
+                    return f'Package version: {package_version}'
                 """
             ),
             'childpkg/__init__.py': '',
@@ -39,17 +39,17 @@ def test_package_level_relative_import(tmp_path):
 
     from parentpkg.childpkg import info  # noqa: F401  # type: ignore
 
-    assert info.get_full_info() == "Child module - Package version: 1.0.0"
+    assert info.get_full_info() == 'Child module - Package version: 1.0.0'
 
     # 親パッケージの __init__.pyを書き換えて値を変更
     update_module(
         modules_dir,
         '__init__.py',
         """
-        package_version = "2.5.0"
+        package_version = '2.5.0'
 
         def package_info():
-            return f"Package version: {package_version}"
+            return f'Package version: {package_version}'
         """,
     )
 
@@ -60,10 +60,10 @@ def test_package_level_relative_import(tmp_path):
 
     # 更新された値を確認
     new_info = importlib.import_module('parentpkg.childpkg.info')
-    assert new_info.get_full_info() == "Child module - Package version: 2.5.0"
+    assert new_info.get_full_info() == 'Child module - Package version: 2.5.0'
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     from test_utils import run_test_as_script
 
     run_test_as_script(test_package_level_relative_import, __file__)

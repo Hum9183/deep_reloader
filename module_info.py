@@ -13,6 +13,7 @@ class ModuleInfo:
     """
     モジュールとその子モジュール(from-import)情報を保持するクラス
     """
+
     def __init__(self, module: ModuleType) -> None:
         self.module: ModuleType = module
         self.children: List['ModuleInfo'] = []
@@ -20,21 +21,23 @@ class ModuleInfo:
 
     def reload(self, visited=None) -> None:
         """
-        再帰的にリロードを実行（親→子の順でリロード）。
+        再帰的にリロードを実行
 
-        主目的：自分自身のモジュールを最新のファイル内容でリロードすること
-              （自身が取り込む子モジュールは最新ではないが今の段階ではそれでOK）。
+        処理の流れ:
+        1. sys.modulesから一時削除してキャッシュクリア
+        2. importlib.import_module()で新しいモジュールオブジェクト(new_module)を作成
+        3. 子モジュールを再帰的にリロード
+        4. 子のシンボルをnew_moduleにコピー（関数の__globals__が正しく参照できるように）
+        5. self.module.__dict__を更新（削除された属性を除去、新しい属性を追加・上書き）
+        6. sys.modules[name]にself.moduleを登録（new_moduleではなく）
 
-        なぜ古い子モジュールでリロードするのか：
-        1. 通常、親から再帰的にリロードすると（親→子→孫の順で呼び出しが進むため）
-           親がリロードする際に古い子を取り込むことになる
-        2. このreload()では各モジュールを最新内容に更新することが主目的(子モジュールは最新でなくてもよい)
-        3. 子モジュール（from-import）の更新は後でoverwrite_symbols()が解決する設計
-        4. リロードロジックとシンボル伝播ロジックは分離させることでよりシンプルに設計を保っている
+        重要な設計思想:
+        - self.moduleのオブジェクトIDを保持することで、既存の参照を有効に保つ
+        - new_moduleは一時的な作業用オブジェクトとして使用
+        - __dict__を更新することで、オブジェクトを置き換えずに中身だけを更新
         """
 
         # 再帰処理で訪問済みモジュールを記録するセット
-        # 最初の呼び出し時のみ作成し、以降の再帰呼び出しでは同じオブジェクトを共有
         if visited is None:
             visited = set()
 
@@ -43,42 +46,35 @@ class ModuleInfo:
         if name in visited:
             return
 
-        # キャッシュを消してから再インポート
-        if name in sys.modules:
-            sys.modules.pop(name, None)
+        # 一時的にsys.modulesから削除してキャッシュをクリア
+        sys.modules.pop(name, None)
         importlib.invalidate_caches()
 
+        # 新しいモジュールをインポート
         new_module = importlib.import_module(name)
-        self.module = new_module
-        visited.add(name)
 
-        # リロード完了をログ出力（ログレベルで制御）
-        logger.info(f'RELOADED {name}')
-        
-        # TODO: より詳細なリロード情報のログ出力
-        # - モジュールのファイルパス、サイズ、最終更新時刻
-        # - リロード前後での属性・関数の変更差分
-        # - 依存関係の深度レベル表示
-        # - リロード所要時間の計測
-
-        # 子を再帰的にリロード
+        # 子を再帰的にリロード（子が先に完了する必要がある）
         for child in self.children:
             child.reload(visited)
 
-    def overwrite_symbols(self) -> None:
-        """
-        from-import シンボルを親モジュールに上書き（葉から順）
-        
-        TODO: シンボル上書き処理の詳細ログ追加
-        - 上書きされるシンボルの一覧（名前、型、古い値→新しい値）
-        - シンボルコピーの失敗ケースとその理由
-        - ネストレベルと処理順序の視覚化
-        - 競合や循環参照の検出・警告
-        """
-        # 子を先に処理（葉 → 根）
+        # 子のリロード後、from-importシンボルを新しいモジュールにコピー
+        # （new_moduleの関数の__globals__に正しい値を設定するため）
         for child in self.children:
-            child.overwrite_symbols()
+            child.symbols.copy_to(child.module, new_module)
 
-        # 子モジュールから自分にシンボルをコピー
-        for child in self.children:
-            child.symbols.copy_to(child.module, self.module)
+        # リロード前のモジュール(self.module)にあって、リロード後のモジュール(new_module)に存在しなくなった属性を削除する
+        old_keys = set(self.module.__dict__.keys())
+        new_keys = set(new_module.__dict__.keys())
+        for key in old_keys - new_keys:
+            if not key.startswith('__'):  # __name__, __file__等の特殊属性は保持
+                del self.module.__dict__[key]
+
+        # self.module.__dict__をnew_module.__dict__で更新（属性を追加・上書き）
+        self.module.__dict__.update(new_module.__dict__)
+
+        # sys.modulesをself.moduleで上書き
+        sys.modules[name] = self.module
+
+        visited.add(name)
+
+        logger.debug(f'RELOADED {name}')

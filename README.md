@@ -3,59 +3,15 @@
 > [!WARNING]
 > このソフトウェアは現在プレリリース版（v0.2.0）です。APIが変更される可能性があります。
 
-Pythonモジュールの依存関係を解析して、再帰的に再読み込みを行うライブラリです。特にMayaでのスクリプト開発時に、モジュール変更を即座に反映させるために設計されています。
+Pythonモジュールの依存関係を解析して、再帰的にリロードを行うライブラリです。特にMayaでのスクリプト開発時に、モジュール変更を即座に反映させるために設計されています。
 
 ## 機能
 
-- **深い再読み込み**: from-import の依存関係を自動解析
+- **深いリロード**: 深い階層でもリロードが可能
 - **AST解析**: 静的解析により from-import文 を正確に検出
 - **ワイルドカード対応**: `from module import *` もサポート
 - **相対インポート対応**: パッケージ内の相対インポートを正しく処理
-- **`__pycache__`クリア**: 古いキャッシュファイルを自動削除
-
-## 制限事項・既知の問題
-
-### Python言語レベルの制約（解決不可能）
-
-- **デコレーターのクロージャ問題**: デコレーター内で例外クラスをキャッチする場合、リロード後に正しくキャッチできません
-  - これはPython言語仕様の制約であり、すべてのリロードシステム（`importlib.reload()`, IPythonの`%autoreload`等）が抱える共通の問題です
-  - **原因**: デコレーターのクロージャは定義時にクラスオブジェクトへの参照を保持し、リロード後も古いクラスオブジェクトを参照し続けます
-  - **例**:
-    ```python
-    # custom_error.py
-    class CustomError(Exception):
-        @staticmethod
-        def catch(function):
-            @functools.wraps(function)
-            def wrapper(*args, **kwargs):
-                try:
-                    return function(*args, **kwargs)
-                except CustomError as e:  # ←デコレーター定義時のCustomErrorを保持
-                    return f"Caught: {e}"
-            return wrapper
-
-    # main.py
-    @CustomError.catch  # ←リロード後、このクロージャは古いCustomErrorを参照
-    def risky_function():
-        raise CustomError("Error")  # ←新しいCustomErrorを投げる
-    ```
-  - **回避策**:
-    - デコレーターを使用せず、直接`try-except`で例外をキャッチする
-    - 例外クラスをリロード対象から除外する
-    - アプリケーションを再起動する
-
-- **モジュールスコープでのクラス参照**: モジュールレベルでクラスをエイリアスする場合も同様の問題が発生します
-  - **例**: `MyError = CustomError` のようなエイリアスは、リロード後も古いクラスを参照します
-  - **回避策**: エイリアスを避け、常にオリジナルのクラス名を使用する
-
-### 実装上の制約（将来対応予定）
-
-- **import文未対応**: 現在は `import module` 形式の依存関係は解析対象外です
-  - 対応: `from module import something` 形式のみ解析・リロード
-  - 今後のバージョンで `import module` にも対応予定
-- **循環インポート**: 循環インポート（A → B → A のような相互依存）が存在するモジュール構造では現在エラーが発生します
-  - 今後のバージョンで対応予定
-  - 回避策: 循環依存を避けた設計に変更するか、手動での部分リロードをご検討ください
+- **循環参照対応**: Pythonで動作する循環インポート（関数内での遅延インポート）を正しくリロード
 
 ## 使用方法
 
@@ -151,19 +107,77 @@ python -m pytest deep_reloader/tests/test_absolute_import_basic.py -v
 python -m pytest deep_reloader/tests/ -vv
 ```
 
-### テストアーキテクチャの特徴
-
-- **二種の実行をサポート**: 各テストファイルはスクリプト実行とpytest実行の両方に対応
-- **条件付きインポート**: 実行環境に応じて相対/絶対インポートを自動切り替え
-- **一時ディレクトリ管理**: 手動作成（スクリプト実行）と`tmp_path`（pytest）の両方をサポート
-
 ### 動作確認済み環境
 
 **テスト開発環境（Maya以外）:**
 - Python 3.11.9+（現在の開発環境で検証済み）
 - pytest 8.4.2+（テスト実行時のみ、現在の開発環境で検証済み）
 
-**注意**: 上記はライブラリのテスト・開発で使用している環境です。Maya内での実行環境とは異なります。Mayaのサポートバージョンは確定していません。
+**注意**: 上記はライブラリのテスト・開発で使用している環境です。Maya内での実行環境とは異なります。Mayaのサポートバージョンはまだ確定していません。
+
+## 制限事項・既知の問題
+
+- **isinstance()チェックの失敗**（Python言語仕様の制約 - 解決不可能）
+  - リロード前に作成したインスタンスは、リロード後のクラスで`isinstance()`チェックが失敗します
+  - これはPython言語仕様の制約であり、すべてのリロードシステムが抱える共通の問題です
+  - **原因**: リロード後、クラスオブジェクトのIDが変わるため、リロード前のインスタンスは古いクラスを参照し続けます
+  - **例**:
+    ```python
+    # リロード前
+    obj = MyClass()
+    isinstance(obj, MyClass)  # True
+
+    # deep_reload後
+    isinstance(obj, MyClass)  # False（objは古いMyClassのインスタンス、MyClassは新しいクラス）
+    ```
+  - **回避策**:
+    - リロード後にインスタンスを再作成する
+    - クラス名での文字列比較を使用する（`type(obj).__name__ == 'MyClass'`）
+    - アプリケーションを再起動する
+
+- **デコレーターのクロージャ問題**（Python言語仕様の制約 - 解決不可能）
+  - デコレーター内で例外クラスをキャッチする場合、リロード後に正しくキャッチできません
+  - これはPython言語仕様の制約であり、すべてのリロードシステム（`importlib.reload()`, IPythonの`%autoreload`等）が抱える共通の問題です
+  - **原因**: デコレーターのクロージャは定義時にクラスオブジェクトへの参照を保持し、リロード後も古いクラスオブジェクトを参照し続けます
+  - **例**:
+    ```python
+    # custom_error.py
+    class CustomError(Exception):
+        @staticmethod
+        def catch(function):
+            @functools.wraps(function)
+            def wrapper(*args, **kwargs):
+                try:
+                    return function(*args, **kwargs)
+                except CustomError as e:  # ←デコレーター定義時のCustomErrorを保持
+                    return f"Caught: {e}"
+            return wrapper
+
+    # main.py
+    @CustomError.catch  # ←リロード後、このクロージャは古いCustomErrorを参照
+    def risky_function():
+        raise CustomError("Error")  # ←新しいCustomErrorを投げる
+    ```
+  - **回避策**:
+    - デコレーターを使用せず、直接`try-except`で例外をキャッチする
+    - 例外クラスをリロード対象から除外する
+    - アプリケーションを再起動する
+
+- **import文未対応**（将来対応予定）
+  - 現在は `import module` 形式の依存関係は解析対象外です
+  - 対応: `from module import something` 形式のみ解析・リロード
+  - 今後のバージョンで対応予定
+
+- **単一パッケージのみリロード**（仕様）
+  - `deep_reload()`は、指定されたモジュールと同じパッケージに属するモジュールのみをリロードします
+  - **理由**: 組み込みモジュール（`collections`等）やサードパーティライブラリ（`maya.cmds`, `PySide2`等）のリロードを防ぎ、システムの安定性を保つため
+  - **例**: `deep_reload(routinerecipe.main)` を実行すると、`routinerecipe`パッケージ内のモジュールのみがリロードされます
+  - **複数の自作パッケージを開発している場合**:
+    ```python
+    # routinerecipe と myutils の両方を開発中の場合
+    deep_reload(myutils.helper)      # myutilsパッケージをリロード
+    deep_reload(routinerecipe.main)  # routinerecipeパッケージをリロード
+    ```
 
 ## バージョン情報
 
@@ -171,13 +185,12 @@ python -m pytest deep_reloader/tests/ -vv
 
 ### リリース状況
 - ✅ コア機能実装完了（from-import対応）
-- ✅ テストスイート（9テスト）
+- ✅ テストスイート（12テスト）
 - ✅ ドキュメント整備
+- ✅ Maya環境での動作検証
+- ✅ 循環インポート対応
 - 🔄 APIの安定化作業中
-- 📋 Maya環境での動作検証
 - 📋 import文対応の追加
-- 📋 循環インポートエラー対応
-- 📋 組み込み・サードパーティモジュールのスキップ処理
 - 📋 デバッグログの強化
 - 📋 パフォーマンス最適化とキャッシュ機能
 
