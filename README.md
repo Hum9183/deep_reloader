@@ -15,6 +15,41 @@ Pythonモジュールの依存関係を解析して、再帰的に再読み込�
 
 ## 制限事項・既知の問題
 
+### Python言語レベルの制約（解決不可能）
+
+- **デコレーターのクロージャ問題**: デコレーター内で例外クラスをキャッチする場合、リロード後に正しくキャッチできません
+  - これはPython言語仕様の制約であり、すべてのリロードシステム（`importlib.reload()`, IPythonの`%autoreload`等）が抱える共通の問題です
+  - **原因**: デコレーターのクロージャは定義時にクラスオブジェクトへの参照を保持し、リロード後も古いクラスオブジェクトを参照し続けます
+  - **例**:
+    ```python
+    # custom_error.py
+    class CustomError(Exception):
+        @staticmethod
+        def catch(function):
+            @functools.wraps(function)
+            def wrapper(*args, **kwargs):
+                try:
+                    return function(*args, **kwargs)
+                except CustomError as e:  # ←デコレーター定義時のCustomErrorを保持
+                    return f"Caught: {e}"
+            return wrapper
+
+    # main.py
+    @CustomError.catch  # ←リロード後、このクロージャは古いCustomErrorを参照
+    def risky_function():
+        raise CustomError("Error")  # ←新しいCustomErrorを投げる
+    ```
+  - **回避策**:
+    - デコレーターを使用せず、直接`try-except`で例外をキャッチする
+    - 例外クラスをリロード対象から除外する
+    - アプリケーションを再起動する
+
+- **モジュールスコープでのクラス参照**: モジュールレベルでクラスをエイリアスする場合も同様の問題が発生します
+  - **例**: `MyError = CustomError` のようなエイリアスは、リロード後も古いクラスを参照します
+  - **回避策**: エイリアスを避け、常にオリジナルのクラス名を使用する
+
+### 実装上の制約（将来対応予定）
+
 - **import文未対応**: 現在は `import module` 形式の依存関係は解析対象外です
   - 対応: `from module import something` 形式のみ解析・リロード
   - 今後のバージョンで `import module` にも対応予定
