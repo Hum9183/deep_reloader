@@ -1,7 +1,7 @@
 # deep_reloader
 
 > [!WARNING]
-> このソフトウェアは現在プレリリース版（v0.3.0）です。APIが変更される可能性があります。
+> このソフトウェアは現在プレリリース版です。APIが変更される可能性があります。
 
 Pythonモジュールの依存関係を解析して、再帰的にリロードを行うライブラリです。特にMayaでのスクリプト開発時に、モジュール変更を即座に反映させるために設計されています。
 
@@ -11,7 +11,7 @@ Pythonモジュールの依存関係を解析して、再帰的にリロード�
 - **AST解析**: 静的解析により from-import文 を正確に検出
 - **ワイルドカード対応**: `from module import *` もサポート
 - **相対インポート対応**: パッケージ内の相対インポートを正しく処理
-- **循環参照対応**: Pythonで動作する循環インポート（関数内での遅延インポート）を正しくリロード
+- **循環参照対応**: Pythonで動作する循環インポートを正しくリロード
 
 ## 使用方法
 
@@ -165,25 +165,26 @@ python -m pytest deep_reloader/tests/ -vv
 
 - **import文非対応**（仕様）
   - `import module` 形式の依存関係は解析対象外です
-  - 現在対応しているのは `from module import something` 形式のみです
+  - 現在対応しているのはfrom-import形式です。具体的には、
+    - `from xxx import yyy` 形式
+    - `from .xxx import yyy` 形式
+    - `from . import yyy` 形式
+    - の3つです
+
   - **理由**:
     - `import xxx` は主に標準ライブラリや外部ライブラリで使用され、これらはリロード対象外です
-    - 自作パッケージ内では `from . import module` を使うのが一般的な慣習です
+    - 自作パッケージ内では from-import を使うのが一般的な慣習です
 
 - **単一パッケージのみリロード**（仕様）
   - `deep_reload()`は、指定されたモジュールと同じパッケージに属するモジュールのみをリロードします
-  - **理由**: 組み込みモジュール（`collections`等）やサードパーティライブラリ（`maya.cmds`, `PySide2`等）のリロードを防ぎ、システムの安定性を保つため
-  - **例**: `deep_reload(routinerecipe.main)` を実行すると、`routinerecipe`パッケージ内のモジュールのみがリロードされます
+  - **理由**: 組み込みモジュール（`sys`等）やサードパーティライブラリ（`maya.cmds`, `PySide2`等）のリロードを防ぎ、システムの安定性を保つため
+  - **例**: `deep_reload(myutils)` を実行すると、`myutils`パッケージ内のモジュールのみがリロードされます
   - **複数の自作パッケージを開発している場合**:
     ```python
-    # routinerecipe と myutils の両方を開発中の場合
-    deep_reload(myutils.helper)      # myutilsパッケージをリロード
-    deep_reload(routinerecipe.main)  # routinerecipeパッケージをリロード
+    # myutils と myfunctions の両方を開発中の場合
+    deep_reload(myutils.helper)   # myutilsパッケージをリロード
+    deep_reload(myfunctions.main) # myfunctionsパッケージをリロード
     ```
-
-## バージョン情報
-
-**現在のバージョン**: v0.3.0 (Pre-release)
 
 ### リリース状況
 - ✅ コア機能実装完了（from-import対応）
@@ -192,7 +193,6 @@ python -m pytest deep_reloader/tests/ -vv
 - ✅ Maya環境での動作検証
 - ✅ 循環インポート対応
 - 🔄 APIの安定化作業中
-- 📋 import文対応の追加
 - 📋 デバッグログの強化
 - 📋 パフォーマンス最適化とキャッシュ機能
 
