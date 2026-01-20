@@ -163,10 +163,12 @@ python -m pytest deep_reloader/tests/ -vv
     - 例外クラスをリロード対象から除外する
     - アプリケーションを再起動する
 
-- **import文未対応**（将来対応予定）
-  - 現在は `import module` 形式の依存関係は解析対象外です
-  - 対応: `from module import something` 形式のみ解析・リロード
-  - 今後のバージョンで対応予定
+- **import文非対応**（仕様）
+  - `import module` 形式の依存関係は解析対象外です
+  - 現在対応しているのは `from module import something` 形式のみです
+  - **理由**:
+    - `import xxx` は主に標準ライブラリや外部ライブラリで使用され、これらはリロード対象外です
+    - 自作パッケージ内では `from . import module` を使うのが一般的な慣習です
 
 - **単一パッケージのみリロード**（仕様）
   - `deep_reload()`は、指定されたモジュールと同じパッケージに属するモジュールのみをリロードします
