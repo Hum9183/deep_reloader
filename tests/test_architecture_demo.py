@@ -166,17 +166,14 @@ def test_architecture_demonstration(tmp_path):
 
     # リロード後の値を確認
     # config.pyの変更がutils.py、main.pyまで伝播していることを確認
-    import importlib
-
-    new_main = importlib.import_module('test_package.main')
-    assert new_main.show_info() == 'Running: UpdatedApp v2.5.0'
+    assert test_package.main.show_info() == 'Running: UpdatedApp v2.5.0'
 
     # 実行方式の検出と表示
     # この情報により、どちらの方式で実行されているかが分かります
     execution_method = _detect_execution_method()
     print(f"実行方式: {execution_method}")
     print(f"更新前: Running: DemoApp v1.0.0")
-    print(f"更新後: {new_main.show_info()}")
+    print(f"更新後: {test_package.main.show_info()}")
     print("※ deep_reload()により依存チェーン(config -> utils -> main)がすべて更新されました")
 
     # 成功メッセージ

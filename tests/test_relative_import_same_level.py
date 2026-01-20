@@ -1,4 +1,3 @@
-import importlib
 import textwrap
 
 try:
@@ -58,8 +57,7 @@ def test_same_level_relative_import(tmp_path):
     deep_reload(main)
 
     # 更新された値を確認
-    new_main = importlib.import_module('mypackage.main')
-    assert new_main.get_result() == "999-updated"
+    assert main.get_result() == "999-updated"
 
 
 if __name__ == "__main__":

@@ -1,4 +1,3 @@
-import importlib
 import textwrap
 
 try:
@@ -71,8 +70,7 @@ def test_wildcard_relative_import(tmp_path):
     deep_reload(main)
 
     # 更新された値を確認
-    new_main = importlib.import_module('testpkg.main')
-    assert new_main.get_values() == '555-updated'
+    assert main.get_values() == '555-updated'
 
 
 if __name__ == '__main__':

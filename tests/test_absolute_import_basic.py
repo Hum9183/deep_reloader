@@ -1,4 +1,3 @@
-import importlib
 import textwrap
 
 try:
@@ -43,8 +42,7 @@ def test_simple_from_import_reload(tmp_path):
     deep_reload(test_package.b)
 
     # 更新された値を確認
-    new_b = importlib.import_module('test_package.b')
-    assert new_b.x == 999
+    assert test_package.b.x == 999
 
 
 if __name__ == '__main__':
