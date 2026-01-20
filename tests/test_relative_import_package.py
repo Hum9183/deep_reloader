@@ -1,4 +1,3 @@
-import importlib
 import textwrap
 
 try:
@@ -59,8 +58,7 @@ def test_package_level_relative_import(tmp_path):
     deep_reload(info)
 
     # 更新された値を確認
-    new_info = importlib.import_module('parentpkg.childpkg.info')
-    assert new_info.get_full_info() == 'Child module - Package version: 2.5.0'
+    assert info.get_full_info() == 'Child module - Package version: 2.5.0'
 
 
 if __name__ == '__main__':

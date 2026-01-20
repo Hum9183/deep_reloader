@@ -1,5 +1,5 @@
 import logging
-from typing import Iterator, List, Optional
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -17,39 +17,6 @@ class ImportedSymbols:
                       from mymodule import * → ['func1', 'Class1', 'CONST'] (全public属性)
         """
         self.names: List[str] = names or []
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.names)
-
-    def __len__(self) -> int:
-        return len(self.names)
-
-    def __repr__(self) -> str:
-        return f'ImportedSymbols({self.names})'
-
-    def __contains__(self, name: str) -> bool:
-        """指定したシンボル名が含まれているかを返す"""
-        return name in self.names
-
-    def __bool__(self) -> bool:
-        """空でなければ True を返す（if symbols: が可能）"""
-        return bool(self.names)
-
-    def to_list(self) -> List[str]:
-        """シンボル名のリストをコピーして返す"""
-        return list(self.names)
-
-    def add(self, *new_names: str) -> None:
-        """新しいシンボル名を追加（重複は自動的に除去）"""
-        for name in new_names:
-            if name not in self.names:
-                self.names.append(name)
-
-    def merge(self, other: 'ImportedSymbols') -> None:
-        """他の ImportedSymbols と結合（重複除去）"""
-        for name in other.names:
-            if name not in self.names:
-                self.names.append(name)
 
     def copy_to(self, source_module, target_module) -> None:
         """

@@ -1,4 +1,3 @@
-import importlib
 import textwrap
 
 try:
@@ -59,8 +58,7 @@ def test_parent_level_relative_import(tmp_path):
     deep_reload(worker)
 
     # 更新された値を確認
-    new_worker = importlib.import_module('rootpkg.subpkg.worker')
-    assert new_worker.do_work() == "Working with: modified - modified"
+    assert worker.do_work() == "Working with: modified - modified"
 
 
 if __name__ == "__main__":

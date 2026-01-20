@@ -1,4 +1,3 @@
-import importlib
 import textwrap
 
 try:
@@ -52,13 +51,9 @@ def test_chained_from_import_reload(tmp_path):
     deep_reload(test_package.c)
 
     # 更新された値を確認
-    new_a = importlib.import_module('test_package.a')
-    new_b = importlib.import_module('test_package.b')
-    new_c = importlib.import_module('test_package.c')
-
-    assert new_a.value == 777
-    assert new_b.value == 777
-    assert new_c.value == 777
+    assert test_package.a.value == 777
+    assert test_package.b.value == 777
+    assert test_package.c.value == 777
 
 
 if __name__ == "__main__":

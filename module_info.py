@@ -46,16 +46,19 @@ class ModuleInfo:
         if name in visited:
             return
 
+        # このモジュールの処理が完了したことをマーク
+        visited.add(name)
+
+        # 子を再帰的にリロード（子が先に完了する必要がある）
+        for child in self.children:
+            child.reload(visited)
+
         # 一時的にsys.modulesから削除してキャッシュをクリア
         sys.modules.pop(name, None)
         importlib.invalidate_caches()
 
         # 新しいモジュールをインポート
         new_module = importlib.import_module(name)
-
-        # 子を再帰的にリロード（子が先に完了する必要がある）
-        for child in self.children:
-            child.reload(visited)
 
         # 子のリロード後、from-importシンボルを新しいモジュールにコピー
         # （new_moduleの関数の__globals__に正しい値を設定するため）
@@ -75,6 +78,7 @@ class ModuleInfo:
         # sys.modulesをself.moduleで上書き
         sys.modules[name] = self.module
 
+        # 訪問済みとしてマーク
         visited.add(name)
 
         logger.debug(f'RELOADED {name}')

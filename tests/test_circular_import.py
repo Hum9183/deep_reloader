@@ -3,7 +3,6 @@
 A → B → A のような循環インポート構造が正しくリロードされることを確認
 """
 
-import importlib
 import textwrap
 
 try:
@@ -82,9 +81,8 @@ def test_circular_import(tmp_path):
     deep_reload(module_a)
 
     # 更新確認
-    new_module_a = importlib.import_module('circular_pkg.module_a')
-    assert new_module_a.func_a() == 'A-v2'
-    assert new_module_a.call_b() == 'B-v2'
+    assert module_a.func_a() == 'A-v2'
+    assert module_a.call_b() == 'B-v2'
 
 
 if __name__ == "__main__":

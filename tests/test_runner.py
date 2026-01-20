@@ -2,6 +2,28 @@
 全テストファイルを一括でスクリプト実行するスクリプト
 """
 
+# TODO: テストファイルの構造リファクタリング
+# 現在、このプロジェクトは1ファイル1テスト関数という特殊な構造を採用しているが、
+# 一般的なPythonプロジェクトでは1ファイルに複数のテスト関数を含める。
+#
+# 現状:
+# - 既存の12ファイル: 1ファイル1テスト関数
+# - test_reload_without_reimport.py: 1ファイル4テスト関数（新規追加）
+#
+# リファクタリング案:
+# 1. 関連するテストを統合してファイル数を削減
+#    - test_absolute_import.py (basic, chained, wildcard を統合)
+#    - test_relative_import.py (same_level, parent, package, multilevel, wildcard を統合)
+# 2. 新規テストは複数関数パターンを採用
+# 3. test_runner.pyのサマリー表示を「テスト関数数」ベースに変更
+#
+# メリット:
+# - 一般的なPythonプロジェクトとの一貫性
+# - 関連テストのグループ化で可読性向上
+# - ファイル数の削減
+#
+# 注意: 既存テストの統合は破壊的変更のため、慎重に検討すること
+
 import subprocess
 import sys
 import textwrap

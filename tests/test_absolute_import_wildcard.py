@@ -1,4 +1,3 @@
-import importlib
 import textwrap
 
 try:
@@ -52,9 +51,8 @@ def test_wildcard_from_import_reload(tmp_path):
     deep_reload(test_package.b)
 
     # 更新された値を確認
-    new_b = importlib.import_module('test_package.b')
-    assert new_b.x == 100
-    assert new_b.y == 200
+    assert test_package.b.x == 100
+    assert test_package.b.y == 200
 
 
 if __name__ == '__main__':
