@@ -3,7 +3,7 @@ import importlib
 import inspect
 import logging
 from types import ModuleType
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from .imported_symbols import ImportedSymbols
 
@@ -47,28 +47,63 @@ class SymbolExtractor:
                (module2, ImportedSymbols(['module2'])),
                (parent_package, ImportedSymbols(['func']))]
         """
-        if node.level > 0 and node.module is None:
-            # from . import yyy のパターン
-            return self._extract_dot_only(node)
-        else:
-            # 上記以外(from xxx import yyy 系)のパターン
-            return self._extract_module_specified(node)
+        # ワイルドカードインポートは特別扱い
+        if any(alias.name == '*' for alias in node.names):
+            return self._extract_wildcard(node)
 
-    def _extract_dot_only(self, node: ast.ImportFrom) -> List[Tuple[ModuleType, ImportedSymbols]]:
-        """from . import yyy 形式のインポートから依存関係を抽出する
-
-        モジュールインポートとシンボルインポートを自動判別して処理する
-        """
-        parent_module = self._import_parent_package(node.level)
+        # 親モジュールとインポート関数を取得
+        parent_module, import_func = self._get_parent_and_import_func(node)
         if parent_module is None or parent_module is self.module:
             return []
 
-        # 各インポート名をモジュールまたはシンボルとして分類
+        # モジュール/シンボルの分類と依存関係の抽出
+        return self._classify_imports(parent_module, node.names, import_func)
+
+    def _extract_wildcard(self, node: ast.ImportFrom) -> List[Tuple[ModuleType, ImportedSymbols]]:
+        """ワイルドカードインポート (from xxx import *) を処理"""
+        parent_module = self._import_module(node)
+        if parent_module is None or parent_module is self.module:
+            return []
+        symbols = self._extract_symbols(parent_module, node)
+        return [(parent_module, symbols)]
+
+    def _get_parent_and_import_func(
+        self, node: ast.ImportFrom
+    ) -> Tuple[Optional[ModuleType], Optional[Callable[[str], Optional[ModuleType]]]]:
+        """親モジュールと子モジュールインポート関数を取得
+
+        Returns:
+            (親モジュール, インポート関数)のタプル
+        """
+        if node.level > 0 and node.module is None:
+            # from . import yyy パターン
+            parent = self._import_parent_package(node.level)
+            import_func = lambda name: self._import_relative_module(node.level, name)
+        else:
+            # from xxx import yyy パターン
+            parent = self._import_module(node)
+            import_func = lambda name: self._try_import_submodule(parent, name) if parent else None
+
+        return parent, import_func
+
+    def _classify_imports(
+        self, parent_module: ModuleType, aliases: List[ast.alias], import_func: Callable[[str], Optional[ModuleType]]
+    ) -> List[Tuple[ModuleType, ImportedSymbols]]:
+        """インポート名をモジュールとシンボルに分類して依存関係を返す
+
+        Args:
+            parent_module: 親モジュール
+            aliases: インポートするエイリアスのリスト
+            import_func: モジュールインポートを試行する関数
+
+        Returns:
+            依存関係のリスト
+        """
         module_imports = []
         symbol_names = []
 
-        for alias in node.names:
-            child_module = self._import_relative_module(node.level, alias.name)
+        for alias in aliases:
+            child_module = import_func(alias.name)
             if child_module is not None and child_module is not self.module:
                 module_imports.append((child_module, alias.name))
             else:
@@ -84,16 +119,6 @@ class SymbolExtractor:
 
         return results
 
-    def _extract_module_specified(self, node: ast.ImportFrom) -> List[Tuple[ModuleType, ImportedSymbols]]:
-        """from xxx import yyy 形式のインポートから依存関係を抽出する (モジュール名指定あり)"""
-        child_module = self._import_module(node)
-        # モジュール解決失敗 or 自己参照の場合は依存関係なし
-        if child_module is None or child_module is self.module:
-            return []
-
-        symbols = self._extract_symbols(child_module, node)
-        return [(child_module, symbols)]
-
     def _import_module(self, stmt: ast.ImportFrom) -> Optional[ModuleType]:
         """from xxx import yyy 形式のインポートからモジュールを取得"""
         try:
@@ -103,6 +128,22 @@ class SymbolExtractor:
             else:
                 # 絶対インポート(from xxx import yyy)の場合
                 return importlib.import_module(stmt.module)
+        except (ModuleNotFoundError, ImportError):
+            return None
+
+    def _try_import_submodule(self, parent_module: ModuleType, name: str) -> Optional[ModuleType]:
+        """親モジュールから指定された名前をサブモジュールとしてインポートを試行
+
+        Args:
+            parent_module: 親モジュール
+            name: インポートする名前
+
+        Returns:
+            インポートされたサブモジュール、失敗時はNone
+        """
+        try:
+            full_name = f'{parent_module.__name__}.{name}'
+            return importlib.import_module(full_name)
         except (ModuleNotFoundError, ImportError):
             return None
 
