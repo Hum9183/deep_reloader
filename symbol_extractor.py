@@ -122,9 +122,25 @@ class SymbolExtractor:
               → level=1, module_name='utils' → mypackage.sub.utils
             - from .utils import func
               → level=1, module_name='utils' → mypackage.sub.utils
+
+            self.moduleがmypackage.sub（パッケージの__init__.py）の場合
+            - from .utils import func
+              → level=1, module_name='utils' → mypackage.sub.utils
         """
         try:
-            base_name = self.module.__name__.rsplit('.', level)[0]
+            # パッケージ(__path__を持つ)の場合、level - 1 を使用
+            # なぜなら、パッケージ自身が既に1レベル下にいるため
+            if hasattr(self.module, '__path__'):
+                actual_level = level - 1
+            else:
+                actual_level = level
+
+            if actual_level <= 0:
+                # パッケージからのlevel=1の相対インポートの場合、同じパッケージ内
+                base_name = self.module.__name__
+            else:
+                base_name = self.module.__name__.rsplit('.', actual_level)[0]
+
             target_name = f'{base_name}.{module_name}'
             return importlib.import_module(target_name)
         except (ModuleNotFoundError, ImportError):
@@ -145,10 +161,26 @@ class SymbolExtractor:
               → level=1 → mypackage.sub
             - from .. import func
               → level=2 → mypackage
+
+            self.moduleがmypackage.sub（パッケージの__init__.py）の場合
+            - from . import func
+              → level=1 → mypackage.sub（自分自身）
+            - from .. import func
+              → level=2 → mypackage
         """
         try:
-            base_name = self.module.__name__.rsplit('.', level)[0]
-            return importlib.import_module(base_name)
+            # パッケージ(__path__を持つ)の場合、level - 1 を使用
+            if hasattr(self.module, '__path__'):
+                actual_level = level - 1
+            else:
+                actual_level = level
+
+            if actual_level <= 0:
+                # パッケージからのlevel=1の相対インポートの場合、自分自身を返す
+                return self.module
+            else:
+                base_name = self.module.__name__.rsplit('.', actual_level)[0]
+                return importlib.import_module(base_name)
         except (ModuleNotFoundError, ImportError):
             return None
 
