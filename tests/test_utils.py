@@ -2,56 +2,87 @@ import importlib
 import sys
 import tempfile
 from pathlib import Path
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, Set
 
+# テストで使用した一時ディレクトリのパスを記録（pytest/スクリプト実行の両方）
+_test_temp_dirs: Set[Path] = set()
 
-def setup_package_parent_path(test_file_path: str) -> None:
-    """パッケージの親ディレクトリをsys.pathに追加してパッケージのインポートをサポート"""
-    base_path = Path(test_file_path)
-    package_parent_dir = base_path.parent.parent.parent
-    if str(package_parent_dir) not in sys.path:
-        sys.path.insert(0, str(package_parent_dir))
+# パッケージ親ディレクトリのパスを記録（スクリプト実行時のみ）
+_package_parent_path: Optional[str] = None
+
+# ============================================================
+# テスト環境クリーンアップ（インフラ層）
+# pytest/スクリプト実行の両方で使用される共通クリーンアップ機能
+# ============================================================
 
 
 def clear_test_environment():
     """一時ディレクトリのモジュールとパスをクリーンアップしてテスト分離を実現"""
-    # 一時ディレクトリのモジュールを検出
+    # 記録されている一時ディレクトリ配下のモジュールを削除
     modules_to_remove = []
-    for module_name in list(sys.modules.keys()):
-        module = sys.modules[module_name]
-        if hasattr(module, '__file__') and module.__file__:  # __file__属性を持つモジュールのみ
-            module_path = str(module.__file__)
-            if _is_temp_path(module_path):  # 一時ディレクトリパスかチェック
+    for module_name, module in list(sys.modules.items()):
+        # __file__属性がないモジュールはスキップ
+        if not hasattr(module, '__file__') or not module.__file__:
+            continue
+
+        module_path = Path(module.__file__)
+
+        # 記録された一時ディレクトリのいずれかの配下にあるかチェック
+        for temp_dir in _test_temp_dirs:
+            if temp_dir in module_path.parents or module_path == temp_dir:
                 modules_to_remove.append(module_name)
+                break  # 見つかったら次のモジュールへ
 
     # 検出されたモジュールを削除
     for module_name in modules_to_remove:
         sys.modules.pop(module_name, None)
 
-    # 一時ディレクトリのパスを検出
+    # 記録されている一時ディレクトリのパスをsys.pathから削除
     paths_to_remove = []
     for path in sys.path:
-        if _is_temp_path(path):
-            paths_to_remove.append(path)
+        path_obj = Path(path)
 
-    # 検出されたパスを削除
+        # 記録された一時ディレクトリのいずれかと一致するかチェック
+        for temp_dir in _test_temp_dirs:
+            if path_obj == temp_dir or temp_dir in path_obj.parents:
+                paths_to_remove.append(path)
+                break  # 見つかったら次のパスへ
+
     for path in paths_to_remove:
         if path in sys.path:
             sys.path.remove(path)
 
     importlib.invalidate_caches()
 
+    # クリーンアップ後は記録をクリア
+    _test_temp_dirs.clear()
+
+    # パッケージ親ディレクトリのパスを削除
+    global _package_parent_path
+    if _package_parent_path and _package_parent_path in sys.path:
+        sys.path.remove(_package_parent_path)
+    _package_parent_path = None
+
+
+# ============================================================
+# テストヘルパー関数
+# 各テスト関数が直接使用するユーティリティ
+# ============================================================
+
 
 def add_temp_path_to_sys(tmp_path: Path) -> None:
     """
-    一時ディレクトリをsys.pathに追加
+    一時ディレクトリをsys.pathに追加し、記録する
 
     Args:
         tmp_path: 一時ディレクトリのPath
 
     Note:
-        重複チェック付きでsys.pathに追加します。
+        重複チェック付きでsys.pathに追加し、後でクリーンアップできるよう記録します。
     """
+    # 一時ディレクトリとして記録
+    _test_temp_dirs.add(tmp_path)
+
     tmp_path_str = str(tmp_path)
     if tmp_path_str not in sys.path:
         sys.path.insert(0, tmp_path_str)
@@ -163,6 +194,24 @@ def update_module(modules_dir: Path, filename: str, content: str) -> None:
     file_path.write_text(textwrap.dedent(content), encoding='utf-8')
 
 
+# ============================================================
+# スクリプト実行サポート
+# スクリプト実行時のみ使用（pytestは使わない）
+# ============================================================
+
+
+def setup_package_parent_path(test_file_path: str) -> None:
+    """パッケージの親ディレクトリをsys.pathに追加してパッケージのインポートをサポート"""
+    global _package_parent_path
+    base_path = Path(test_file_path)
+    package_parent_dir = base_path.parent.parent.parent
+    package_parent_dir_str = str(package_parent_dir)
+
+    if package_parent_dir_str not in sys.path:
+        sys.path.insert(0, package_parent_dir_str)
+        _package_parent_path = package_parent_dir_str
+
+
 def run_test_as_script(test_function: Callable[[Path], None], test_file_path: str) -> None:
     """
     スクリプト実行時の共通ロジック
@@ -201,9 +250,6 @@ def run_test_as_script(test_function: Callable[[Path], None], test_file_path: st
     # パス設定
     setup_package_parent_path(test_file_path)
 
-    # テスト前のクリーンアップ
-    clear_test_environment()
-
     try:
         # 一時ディレクトリでテスト実行
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -225,21 +271,3 @@ def run_test_as_script(test_function: Callable[[Path], None], test_file_path: st
     finally:
         # テスト後のクリーンアップ
         clear_test_environment()
-
-
-def _is_temp_path(path: str) -> bool:
-    """パスが一時ディレクトリかどうかを判定"""
-    # 一時ディレクトリパスパターンの定義
-    temp_patterns = [
-        'pytest-of-',  # pytest実行時の一時ディレクトリ
-        '/tmp/tmp',  # Unix系の一時ディレクトリ
-        '/Temp/tmp',  # Windows系の一時ディレクトリ
-        '/var/folders/',  # macOSの一時ディレクトリ
-    ]
-
-    # パターンマッチングでチェック
-    for pattern in temp_patterns:
-        if pattern in path:
-            return True
-
-    return False
