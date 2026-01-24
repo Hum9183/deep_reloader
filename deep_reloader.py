@@ -83,7 +83,7 @@ def _build_tree(module: ModuleType, visited: set, target_package: str) -> Module
     node = ModuleInfo(module)
 
     # 循環インポート検出: すでに訪問済みなら子の展開はスキップ（無限ループ防止）
-    # ただし、ノード自体は作成してリロード対象には含める
+    # ノード自体は作成して返す（将来のデバッグ出力で循環参照を可視化するため）
     if module.__name__ in visited:
         return node
 

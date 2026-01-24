@@ -5,10 +5,7 @@ A → B → A のような循環インポート構造が正しくリロードさ
 
 import textwrap
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
+from ..test_utils import create_test_modules, update_module
 
 
 def test_circular_import(tmp_path):
@@ -83,9 +80,3 @@ def test_circular_import(tmp_path):
     # 更新確認
     assert module_a.func_a() == 'A-v2'
     assert module_a.call_b() == 'B-v2'
-
-
-if __name__ == "__main__":
-    from test_utils import run_test_as_script
-
-    run_test_as_script(test_circular_import, __file__)

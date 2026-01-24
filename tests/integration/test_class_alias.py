@@ -7,10 +7,7 @@
 
 import textwrap
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
+from ..test_utils import create_test_modules, update_module
 
 
 def test_class_alias_problem(tmp_path):
@@ -96,10 +93,3 @@ def test_class_alias_problem(tmp_path):
 
     # 検証: MyClassとMyAliasは同一オブジェクト
     assert custom_class.MyClass is custom_class.MyAlias, 'MyClassとMyAliasが同一オブジェクトではありません'
-
-
-if __name__ == '__main__':
-    # スクリプト実行モード
-    from test_utils import run_test_as_script
-
-    run_test_as_script(test_class_alias_problem, __file__)

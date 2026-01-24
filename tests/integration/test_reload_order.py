@@ -9,13 +9,10 @@
 
 import textwrap
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
+from ..test_utils import create_test_modules, update_module
 
 
-def test_module_level_code_reload(tmp_path):
+def test_child_reload_before_parent_import(tmp_path):
     """モジュールレベルコードが正しく更新されることを確認
 
     このテストは、親モジュールが子モジュールをインポートする際に
@@ -62,9 +59,3 @@ def test_module_level_code_reload(tmp_path):
     # 重要: APP_TITLEはモジュールインポート時に生成される
     # もし子のリロードが親のインポートより後だと、古いVERSIONを使ってしまう
     assert test_package.app.APP_TITLE == "MyApp v2.0"
-
-
-if __name__ == "__main__":
-    from test_utils import run_test_as_script
-
-    run_test_as_script(test_module_level_code_reload, __file__)

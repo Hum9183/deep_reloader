@@ -2,9 +2,9 @@ import importlib
 import logging
 import sys
 from types import ModuleType
-from typing import List
+from typing import List, Optional
 
-from .imported_symbols import ImportedSymbols
+from .import_clause import ImportClause
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class ModuleInfo:
     def __init__(self, module: ModuleType) -> None:
         self.module: ModuleType = module
         self.children: List['ModuleInfo'] = []
-        self.symbols: ImportedSymbols = ImportedSymbols()
+        self.symbols: Optional[ImportClause] = None
 
     def reload(self, visited=None) -> None:
         """
@@ -63,7 +63,13 @@ class ModuleInfo:
         # 子のリロード後、from-importシンボルを新しいモジュールにコピー
         # （new_moduleの関数の__globals__に正しい値を設定するため）
         for child in self.children:
-            child.symbols.copy_to(child.module, new_module)
+            if child.symbols is not None:
+                # child.moduleは依存先モジュール（from_module）
+                # symbolsに含まれる名前の値を、sys.modulesから取得するか、
+                # child.moduleから取得してコピーする
+                # モジュールの場合、sys.modulesから新しいモジュールを取得
+                source_module = sys.modules.get(child.module.__name__, child.module)
+                self._copy_symbols_to(child.symbols, source_module, new_module)
 
         # リロード前のモジュール(self.module)にあって、リロード後のモジュール(new_module)に存在しなくなった属性を削除する
         old_keys = set(self.module.__dict__.keys())
@@ -82,3 +88,18 @@ class ModuleInfo:
         visited.add(name)
 
         logger.debug(f'RELOADED {name}')
+
+    def _copy_symbols_to(self, symbols: ImportClause, source_module, target_module) -> None:
+        """
+        source_moduleからtarget_moduleへ指定されたシンボルをコピーする
+
+        Args:
+            symbols: コピーするシンボル名のリスト
+            source_module: コピー元のモジュール
+            target_module: コピー先のモジュール
+        """
+        for name in symbols:
+            if hasattr(source_module, name):
+                value = getattr(source_module, name)
+                setattr(target_module, name, value)
+                logger.debug(f'{target_module.__name__}.{name} ← {source_module.__name__}.{name} ({value!r})')

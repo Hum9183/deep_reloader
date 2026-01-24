@@ -8,10 +8,7 @@ sys.modules[name] = self.module により、リロード後も既存のモジュ
 """
 import textwrap
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
+from ..test_utils import create_test_modules, update_module
 
 
 def test_module_reference_consistency(tmp_path):
@@ -75,9 +72,3 @@ def test_module_reference_consistency(tmp_path):
 
     # 重要：既存の参照から最新の内容にアクセスできることを確認
     assert version_after == 2, 'リロード後の値が反映されていない'
-
-
-if __name__ == '__main__':
-    from test_utils import run_test_as_script
-
-    run_test_as_script(test_module_reference_consistency, __file__)

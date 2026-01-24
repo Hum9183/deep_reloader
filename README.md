@@ -1,7 +1,7 @@
 # deep_reloader
 
 > [!WARNING]
-> このソフトウェアは現在プレリリース版（v0.3.0）です。APIが変更される可能性があります。
+> このソフトウェアは現在プレリリース版です。APIが変更される可能性があります。
 
 Pythonモジュールの依存関係を解析して、再帰的にリロードを行うライブラリです。特にMayaでのスクリプト開発時に、モジュール変更を即座に反映させるために設計されています。
 
@@ -11,7 +11,27 @@ Pythonモジュールの依存関係を解析して、再帰的にリロード�
 - **AST解析**: 静的解析により from-import文 を正確に検出
 - **ワイルドカード対応**: `from module import *` もサポート
 - **相対インポート対応**: パッケージ内の相対インポートを正しく処理
-- **循環参照対応**: Pythonで動作する循環インポート（関数内での遅延インポート）を正しくリロード
+- **循環参照対応**: Pythonで動作する循環インポートを正しくリロード
+
+## インストール
+
+Pythonパスが通っている場所であればどこでも配置可能です。
+本READMEでは一般的なMayaのscriptsフォルダーを例として説明します。
+
+```
+~/Documents/maya/scripts/  (例)
+└── deep_reloader/
+    ├── __init__.py
+    ├── _metadata.py
+    ├── deep_reloader.py
+    ├── from_clause.py
+    ├── import_clause.py
+    ├── module_info.py
+    ├── symbol_extractor.py
+    ├── LICENSE
+    ├── README.md
+    └── tests/
+```
 
 ## 使用方法
 
@@ -46,52 +66,13 @@ deep_reload(your_module)
 - `logging.INFO`: モジュールリロードの状況を表示（デフォルト）
 - `logging.WARNING`: エラーと警告のみ表示
 
-## インストール
-
-Pythonパスが通っている場所であればどこでも配置可能です。
-本READMEでは一般的なMayaのscriptsフォルダーを例として説明します。
-
-```
-~/Documents/maya/scripts/  (例)
-└── deep_reloader/
-    ├── __init__.py
-    ├── _metadata.py
-    ├── deep_reloader.py
-    ├── imported_symbols.py
-    ├── module_info.py
-    ├── symbol_extractor.py
-    ├── LICENSE
-    ├── README.md
-    └── tests/          # テストファイル（開発・デバッグ用）
-```
-
 ## テスト実行
 
-**注意: テストはVSCodeやコマンドラインで実行してください。Maya内部での実行はサポートしていません。**
+**注意: テストはpytestで実行してください。Maya内部での実行はサポートしていません。**
 
-このプロジェクトでは、スクリプト実行とpytest実行の両方をサポートしています。Maya開発環境での利便性を考慮し、pytestが利用できない環境でも直接スクリプトとしてテストを実行できます。
-
-### スクリプト実行
-
-各テストファイルを直接Python スクリプトとして実行できます：
-
-#### コマンドライン実行
-
-```shell
-# 全テストを一括実行（フルパス指定）
-python ~/Documents/maya/scripts/deep_reloader/tests/test_runner.py
-
-# 個別テスト実行（フルパス指定）
-python ~/Documents/maya/scripts/deep_reloader/tests/test_absolute_import_basic.py
-```
-
-#### VSCode実行
-
-VSCodeでテストファイルを開いて「▶️ Run Python File」ボタンで実行できます。
+このプロジェクトのテストはpytest専用です。開発環境でpytestを使用してテストを実行してください。
 
 ### pytest実行
-
-pytestが利用可能な環境では、より高機能なテスト実行が可能です：
 
 ```shell
 # パッケージの親ディレクトリに移動 (例)
@@ -101,17 +82,20 @@ cd ~/Documents/maya/scripts/
 python -m pytest deep_reloader/tests/ -v
 
 # 特定のテストファイル実行
-python -m pytest deep_reloader/tests/test_absolute_import_basic.py -v
+python -m pytest deep_reloader/tests/integration/test_absolute_import.py -v
 
 # より詳細な出力
 python -m pytest deep_reloader/tests/ -vv
+
+# 簡潔な出力
+python -m pytest deep_reloader/tests/ -q
 ```
 
 ### 動作確認済み環境
 
 **テスト開発環境（Maya以外）:**
 - Python 3.11.9+（現在の開発環境で検証済み）
-- pytest 8.4.2+（テスト実行時のみ、現在の開発環境で検証済み）
+- pytest 8.4.2+（テスト実行に必須）
 
 **注意**: 上記はライブラリのテスト・開発で使用している環境です。Maya内での実行環境とは異なります。Mayaのサポートバージョンはまだ確定していません。
 
@@ -163,36 +147,39 @@ python -m pytest deep_reloader/tests/ -vv
     - 例外クラスをリロード対象から除外する
     - アプリケーションを再起動する
 
-- **import文非対応**（仕様）
-  - `import module` 形式の依存関係は解析対象外です
-  - 現在対応しているのは `from module import something` 形式のみです
-  - **理由**:
-    - `import xxx` は主に標準ライブラリや外部ライブラリで使用され、これらはリロード対象外です
-    - 自作パッケージ内では `from . import module` を使うのが一般的な慣習です
+- **import文非対応**（将来的に対応予定）
+  - `import module` 形式の依存関係は現在は解析対象外です
+  - 現在対応しているのはfrom-import形式のみです：
+    - `from xxx import yyy` 形式
+    - `from .xxx import yyy` 形式
+    - `from . import yyy` 形式
+
+  - **現状の推奨**:
+    - from-import を使用してください（例: `from deep_reloader import deep_reload`）
+    - `import xxx` 形式は将来のバージョンで対応予定です
+
+  - **将来の対応予定**:
+    - `import mypackage` のような同一パッケージ内のモジュールインポートを検出し、依存関係として追跡
+    - 標準ライブラリや外部ライブラリは引き続き除外
 
 - **単一パッケージのみリロード**（仕様）
   - `deep_reload()`は、指定されたモジュールと同じパッケージに属するモジュールのみをリロードします
-  - **理由**: 組み込みモジュール（`collections`等）やサードパーティライブラリ（`maya.cmds`, `PySide2`等）のリロードを防ぎ、システムの安定性を保つため
-  - **例**: `deep_reload(routinerecipe.main)` を実行すると、`routinerecipe`パッケージ内のモジュールのみがリロードされます
+  - **理由**: 組み込みモジュール（`sys`等）やサードパーティライブラリ（`maya.cmds`, `PySide2`等）のリロードを防ぎ、システムの安定性を保つため
+  - **例**: `deep_reload(myutils)` を実行すると、`myutils`パッケージ内のモジュールのみがリロードされます
   - **複数の自作パッケージを開発している場合**:
     ```python
-    # routinerecipe と myutils の両方を開発中の場合
-    deep_reload(myutils.helper)      # myutilsパッケージをリロード
-    deep_reload(routinerecipe.main)  # routinerecipeパッケージをリロード
+    # myutils と myfunctions の両方を開発中の場合
+    deep_reload(myutils.helper)   # myutilsパッケージをリロード
+    deep_reload(myfunctions.main) # myfunctionsパッケージをリロード
     ```
-
-## バージョン情報
-
-**現在のバージョン**: v0.3.0 (Pre-release)
 
 ### リリース状況
 - ✅ コア機能実装完了（from-import対応）
-- ✅ テストスイート（12テスト）
+- ✅ テストスイート
 - ✅ ドキュメント整備
 - ✅ Maya環境での動作検証
 - ✅ 循環インポート対応
 - 🔄 APIの安定化作業中
-- 📋 import文対応の追加
 - 📋 デバッグログの強化
 - 📋 パフォーマンス最適化とキャッシュ機能
 
