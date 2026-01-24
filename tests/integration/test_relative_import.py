@@ -1,5 +1,7 @@
 import textwrap
 
+from deep_reloader import deep_reload
+
 from ..test_utils import create_test_modules, update_module
 
 
@@ -51,8 +53,6 @@ def test_same_level_relative_import(tmp_path):
     )
 
     # deep_reloader でリロード
-    from deep_reloader import deep_reload
-
     deep_reload(testpkg.main)
 
     # main.py のインポートされたシンボルも更新されることを確認
@@ -100,8 +100,6 @@ def test_parent_level_relative_import(tmp_path):
     )
 
     # deep_reloader でリロード
-    from deep_reloader import deep_reload
-
     deep_reload(mypkg.sub.module)
 
     # 親パッケージの変更が反映されることを確認

@@ -8,6 +8,8 @@ sys.modules[name] = self.module により、リロード後も既存のモジュ
 """
 import textwrap
 
+from deep_reloader import deep_reload
+
 from ..test_utils import create_test_modules, update_module
 
 

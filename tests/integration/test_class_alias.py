@@ -7,6 +7,8 @@
 
 import textwrap
 
+from deep_reloader import deep_reload
+
 from ..test_utils import create_test_modules, update_module
 
 
@@ -70,8 +72,6 @@ def test_class_alias_problem(tmp_path):
     )
 
     # deep_reloadでリロード
-    from deep_reloader import deep_reload
-
     deep_reload(custom_class)
 
     # リロード後の確認

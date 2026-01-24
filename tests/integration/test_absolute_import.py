@@ -1,5 +1,7 @@
 import textwrap
 
+from deep_reloader import deep_reload
+
 from ..test_utils import create_test_modules, update_module
 
 
@@ -34,8 +36,6 @@ def test_simple_from_import_reload(tmp_path):
     update_module(modules_dir, 'a.py', 'x = 999')
 
     # deep reloadを実行
-    from deep_reloader import deep_reload
-
     deep_reload(test_package.b)
 
     # 更新された値を確認

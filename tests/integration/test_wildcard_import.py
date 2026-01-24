@@ -1,5 +1,7 @@
 import textwrap
 
+from deep_reloader import deep_reload
+
 from ..test_utils import create_test_modules, update_module
 
 
@@ -48,8 +50,6 @@ def test_wildcard_from_import_reload(tmp_path):
     )
 
     # deep_reloader でリロード
-    from deep_reloader import deep_reload
-
     deep_reload(wildcard_pkg.b)
 
     # b.py のワイルドカードインポートで取得したシンボルも更新されることを確認
