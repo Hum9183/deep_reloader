@@ -66,6 +66,8 @@ try-except文による相対インポートと絶対インポートの自動切�
 import sys
 import textwrap
 
+from deep_reloader import deep_reload
+
 from ..test_utils import create_test_modules, update_module
 
 
@@ -146,8 +148,6 @@ def test_architecture_demonstration(tmp_path):
 
     # 通常のimportlib.reload()では依存関係が更新されない
     # deep_reload()を使うことで、依存チェーンをすべてリロード
-    from deep_reloader import deep_reload
-
     deep_reload(test_package.main)
 
     # リロード後の値を確認

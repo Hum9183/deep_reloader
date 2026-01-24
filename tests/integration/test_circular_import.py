@@ -5,6 +5,8 @@ A → B → A のような循環インポート構造が正しくリロードさ
 
 import textwrap
 
+from deep_reloader import deep_reload
+
 from ..test_utils import create_test_modules, update_module
 
 
@@ -73,8 +75,6 @@ def test_circular_import(tmp_path):
     )
 
     # deep reloadを実行
-    from deep_reloader import deep_reload
-
     deep_reload(module_a)
 
     # 更新確認

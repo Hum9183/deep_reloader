@@ -7,6 +7,8 @@ from module import name as alias の形式でインポートした場合、
 
 import textwrap
 
+from deep_reloader import deep_reload
+
 from ..test_utils import create_test_modules, update_module
 
 
@@ -67,8 +69,6 @@ def test_import_with_alias(tmp_path):
     )
 
     # deep_reloadでリロード
-    from deep_reloader import deep_reload
-
     deep_reload(main)
 
     # リロード後の確認 - エイリアスが新しいオブジェクトを参照すべき
@@ -127,8 +127,6 @@ def test_import_with_multiple_aliases(tmp_path):
     )
 
     # deep_reloadでリロード
-    from deep_reloader import deep_reload
-
     deep_reload(consumer)
 
     # リロード後 - 両方のエイリアスが更新されるべき
@@ -180,7 +178,6 @@ def test_import_mixed_alias_and_original(tmp_path):
     )
 
     # deep_reloadでリロード
-    from deep_reloader import deep_reload
 
     deep_reload(app)
 

@@ -1,25 +1,27 @@
-# deep_reloader
+﻿# deep_reloader
+
+[日本語版](docs/README.ja.md) | [中文版](docs/README.zh-CN.md)
 
 > [!WARNING]
-> このソフトウェアは現在プレリリース版です。APIが変更される可能性があります。
+> This software is currently in pre-release. The API may change.
 
-Pythonモジュールの依存関係を解析して、再帰的にリロードを行うライブラリです。特にMayaでのスクリプト開発時に、モジュール変更を即座に反映させるために設計されています。
+A Python library that analyzes module dependencies and performs recursive reloading. Designed specifically for Maya script development to instantly reflect module changes.
 
-## 機能
+## Features
 
-- **深いリロード**: 深い階層でもリロードが可能
-- **AST解析**: 静的解析により from-import文 を正確に検出
-- **ワイルドカード対応**: `from module import *` もサポート
-- **相対インポート対応**: パッケージ内の相対インポートを正しく処理
-- **循環参照対応**: Pythonで動作する循環インポートを正しくリロード
+- **Deep Reload**: Reloads modules at any depth level
+- **AST Analysis**: Accurately detects from-import statements through static analysis
+- **Wildcard Support**: Supports `from module import *`
+- **Relative Import Support**: Properly handles relative imports within packages
+- **Circular Import Support**: Correctly reloads circular imports that work in Python
 
-## インストール
+## Installation
 
-Pythonパスが通っている場所であればどこでも配置可能です。
-本READMEでは一般的なMayaのscriptsフォルダーを例として説明します。
+The package can be placed anywhere in the Python path.
+This README uses Maya's common scripts folder as an example.
 
 ```
-~/Documents/maya/scripts/  (例)
+~/Documents/maya/scripts/  (example)
 └── deep_reloader/
     ├── __init__.py
     ├── _metadata.py
@@ -33,156 +35,145 @@ Pythonパスが通っている場所であればどこでも配置可能です�
     └── tests/
 ```
 
-## 使用方法
+## Usage
 
-### 基本的な使用方法
+### Basic Usage
 
 ```python
-# 最もシンプルな使用例
+# Simplest usage example
 from deep_reloader import deep_reload
 deep_reload(your_module)
 ```
 
-### ログ設定
+### Logging Configuration
 
-開発時やデバッグ時には、詳細なログ出力を有効にできます：
+For development or debugging, you can enable detailed log output:
 
 ```python
 from deep_reloader import deep_reload, setup_logging
 import logging
 
-# ログレベルを設定（すべてのdeep_reloaderログに影響）
-logger = setup_logging(logging.DEBUG)   # 詳細なデバッグ情報
+# Set log level (affects all deep_reloader logs)
+logger = setup_logging(logging.DEBUG)   # Detailed debug information
 
-# 返されたロガーを使って直接ログ出力も可能
-logger.info("deep_reloaderのログ設定が完了しました")
+# You can also use the returned logger for direct logging
+logger.info("deep_reloader logging configured")
 
-# その後、通常通り使用
+# Then use normally
 deep_reload(your_module)
 ```
 
-**ログレベルの説明:**
-- `logging.DEBUG`: pycacheクリアなどの詳細情報も表示
-- `logging.INFO`: モジュールリロードの状況を表示（デフォルト）
-- `logging.WARNING`: エラーと警告のみ表示
+**Log Level Descriptions:**
+- `logging.DEBUG`: Shows detailed information including pycache clearing
+- `logging.INFO`: Shows module reload status (default)
+- `logging.WARNING`: Shows only errors and warnings
 
-## テスト実行
+## Running Tests
 
-**注意: テストはpytestで実行してください。Maya内部での実行はサポートしていません。**
+**Note: Tests must be run with pytest. Running within Maya is not supported.**
 
-このプロジェクトのテストはpytest専用です。開発環境でpytestを使用してテストを実行してください。
-
-### pytest実行
+Tests for this project are pytest-only. Run tests using pytest in your development environment.
 
 ```shell
-# パッケージの親ディレクトリに移動 (例)
-cd ~/Documents/maya/scripts/
+# Navigate to repository root (example)
+cd ~/Documents/maya/scripts/deep_reloader
 
-# 全テスト実行
-python -m pytest deep_reloader/tests/ -v
+# Run all tests
+pytest tests/ -v
 
-# 特定のテストファイル実行
-python -m pytest deep_reloader/tests/integration/test_absolute_import.py -v
+# Run specific test file
+pytest tests/integration/test_absolute_import.py -v
 
-# より詳細な出力
-python -m pytest deep_reloader/tests/ -vv
+# More detailed output
+pytest tests/ -vv
 
-# 簡潔な出力
-python -m pytest deep_reloader/tests/ -q
+# Concise output
+pytest tests/ -q
 ```
 
-### 動作確認済み環境
+### Verified Environment
 
-**テスト開発環境（Maya以外）:**
-- Python 3.11.9+（現在の開発環境で検証済み）
-- pytest 8.4.2+（テスト実行に必須）
+**Test Development Environment (Non-Maya):**
+- Python 3.11.9+ (verified in current development environment)
+- pytest 8.4.2+ (required for running tests)
 
-**注意**: 上記はライブラリのテスト・開発で使用している環境です。Maya内での実行環境とは異なります。Mayaのサポートバージョンはまだ確定していません。
+**Note**: The above is the environment used for library testing and development. It differs from the Maya execution environment. Supported Maya versions are not yet finalized.
 
-## 制限事項・既知の問題
+## Limitations and Known Issues
 
-- **isinstance()チェックの失敗**（Python言語仕様の制約 - 解決不可能）
-  - リロード前に作成したインスタンスは、リロード後のクラスで`isinstance()`チェックが失敗します
-  - これはPython言語仕様の制約であり、すべてのリロードシステムが抱える共通の問題です
-  - **原因**: リロード後、クラスオブジェクトのIDが変わるため、リロード前のインスタンスは古いクラスを参照し続けます
-  - **例**:
-    ```python
-    # リロード前
-    obj = MyClass()
-    isinstance(obj, MyClass)  # True
+### isinstance() Failure (Python Language Constraint)
 
-    # deep_reload後
-    isinstance(obj, MyClass)  # False（objは古いMyClassのインスタンス、MyClassは新しいクラス）
-    ```
-  - **回避策**:
-    - リロード後にインスタンスを再作成する
-    - クラス名での文字列比較を使用する（`type(obj).__name__ == 'MyClass'`）
-    - アプリケーションを再起動する
+Instances created before reload will fail `isinstance()` checks with the reloaded class. This is a constraint of the Python language specification and a common issue with all reload systems.
 
-- **デコレーターのクロージャ問題**（Python言語仕様の制約 - 解決不可能）
-  - デコレーター内で例外クラスをキャッチする場合、リロード後に正しくキャッチできません
-  - これはPython言語仕様の制約であり、すべてのリロードシステム（`importlib.reload()`, IPythonの`%autoreload`等）が抱える共通の問題です
-  - **原因**: デコレーターのクロージャは定義時にクラスオブジェクトへの参照を保持し、リロード後も古いクラスオブジェクトを参照し続けます
-  - **例**:
-    ```python
-    # custom_error.py
-    class CustomError(Exception):
-        @staticmethod
-        def catch(function):
-            @functools.wraps(function)
-            def wrapper(*args, **kwargs):
-                try:
-                    return function(*args, **kwargs)
-                except CustomError as e:  # ←デコレーター定義時のCustomErrorを保持
-                    return f"Caught: {e}"
-            return wrapper
+**Cause**: After reload, the class object ID changes.
 
-    # main.py
-    @CustomError.catch  # ←リロード後、このクロージャは古いCustomErrorを参照
-    def risky_function():
-        raise CustomError("Error")  # ←新しいCustomErrorを投げる
-    ```
-  - **回避策**:
-    - デコレーターを使用せず、直接`try-except`で例外をキャッチする
-    - 例外クラスをリロード対象から除外する
-    - アプリケーションを再起動する
+**Example**:
+```python
+# Before reload
+my_class = MyClass()
+isinstance(my_class, MyClass)  # True
 
-- **import文非対応**（将来的に対応予定）
-  - `import module` 形式の依存関係は現在は解析対象外です
-  - 現在対応しているのはfrom-import形式のみです：
-    - `from xxx import yyy` 形式
-    - `from .xxx import yyy` 形式
-    - `from . import yyy` 形式
+deep_reload(MyClass)         # Reload
 
-  - **現状の推奨**:
-    - from-import を使用してください（例: `from deep_reloader import deep_reload`）
-    - `import xxx` 形式は将来のバージョンで対応予定です
+isinstance(my_class, MyClass)  # False (my_class is an instance of old MyClass, MyClass is the new class)
+```
 
-  - **将来の対応予定**:
-    - `import mypackage` のような同一パッケージ内のモジュールインポートを検出し、依存関係として追跡
-    - 標準ライブラリや外部ライブラリは引き続き除外
+**Workarounds**:
+- Recreate instances after reload
+- Use string comparison with class name (`type(my_class).__name__ == 'MyClass'`)
+- Restart Maya
 
-- **単一パッケージのみリロード**（仕様）
-  - `deep_reload()`は、指定されたモジュールと同じパッケージに属するモジュールのみをリロードします
-  - **理由**: 組み込みモジュール（`sys`等）やサードパーティライブラリ（`maya.cmds`, `PySide2`等）のリロードを防ぎ、システムの安定性を保つため
-  - **例**: `deep_reload(myutils)` を実行すると、`myutils`パッケージ内のモジュールのみがリロードされます
-  - **複数の自作パッケージを開発している場合**:
-    ```python
-    # myutils と myfunctions の両方を開発中の場合
-    deep_reload(myutils.helper)   # myutilsパッケージをリロード
-    deep_reload(myfunctions.main) # myfunctionsパッケージをリロード
-    ```
+### import Statement Not Supported (By Design)
 
-### リリース状況
-- ✅ コア機能実装完了（from-import対応）
-- ✅ テストスイート
-- ✅ ドキュメント整備
-- ✅ Maya環境での動作検証
-- ✅ 循環インポート対応
-- 🔄 APIの安定化作業中
-- 📋 デバッグログの強化
-- 📋 パフォーマンス最適化とキャッシュ機能
+`import xxx` style dependencies are not supported.
 
-## ライセンス
+**Reason**: Restoring attributes automatically added to parent modules during reload adds complexity.
 
-MIT License - 詳細は[LICENSE](LICENSE)ファイルを参照してください。
+**Supported Forms**: from-import only
+- `from xxx import yyy` style
+- `from .xxx import yyy` style
+- `from . import yyy` style
+
+### Single Package Reload Only (By Design)
+
+`deep_reload()` only reloads modules that belong to the same package as the passed module.
+
+**Reason**: Prevents reloading of built-in modules (`sys`, etc.) and third-party libraries (`maya.cmds`, `PySide2`, etc.) to maintain system stability.
+
+**Example**: Running `deep_reload(myutils)` will reload only modules in the package that `myutils` belongs to.
+
+**When developing multiple custom packages**:
+If there are dependencies between packages, reloading may not work correctly. It is recommended to use a single package.
+If absolutely necessary, call `deep_reload()` multiple times considering dependency order.
+```python
+# When you need to reload multiple packages (not recommended)
+deep_reload(myutils)
+deep_reload(mytools)
+```
+
+### Package Structure Required (By Design)
+
+`deep_reload()` only supports packaged modules.
+
+**Reason**: Standalone modules cannot distinguish between standard library and user code, risking accidental system module reloads.
+
+**Not Supported**: Standalone `.py` files (e.g., `~/maya/scripts/my_tool.py`)
+
+**For standalone modules**: Use standard `importlib.reload()`.
+
+**When using multiple modules**: Package them (directory structure with `__init__.py` recommended).
+
+## Release Status
+
+- ✅ Core functionality complete (from-import support)
+- ✅ Test suite
+- ✅ Documentation
+- ✅ Maya environment verification
+- ✅ Circular import support
+- 🔄 API stabilization in progress
+- 📋 Enhanced debug logging
+- 📋 Performance optimization and caching
+
+## License
+
+MIT License - See [LICENSE](LICENSE) file for details.

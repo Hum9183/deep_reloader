@@ -76,7 +76,12 @@ def add_temp_path_to_sys(tmp_path: Path) -> None:
         sys.path.insert(0, tmp_path_str)
 
 
-def create_test_modules(tmp_path: Path, structure: Dict[str, str], package_name: Optional[str] = None) -> Path:
+def create_test_modules(
+    tmp_path: Path,
+    structure: Dict[str, str],
+    package_name: Optional[str] = None,
+    create_init: bool = True,
+) -> Path:
     """
     辞書で定義されたテストモジュール構造を一括作成し、sys.pathに自動追加
 
@@ -87,6 +92,7 @@ def create_test_modules(tmp_path: Path, structure: Dict[str, str], package_name:
                   値: ファイルの内容
                   例: {'__init__.py': '', 'module_a.py': 'x=1', 'sub/mod.py': 'y=2'}
         package_name: パッケージ名。Noneの場合はtmp_path直下にファイルを作成（パッケージなし）
+        create_init: __init__.pyを自動作成するか（デフォルトTrue）。Falseの場合はnamespace package
 
     Returns:
         パッケージディレクトリのPath（package_nameがNoneの場合はtmp_path）
@@ -135,8 +141,8 @@ def create_test_modules(tmp_path: Path, structure: Dict[str, str], package_name:
         file_path.write_text(content, encoding='utf-8')
 
     # __init__.pyが明示的に指定されていない場合、空の__init__.pyを作成
-    # ただし、package_nameがNoneの場合（パッケージなし）は作成しない
-    if package_name is not None:
+    # ただし、package_nameがNoneの場合（パッケージなし）またはcreate_init=Falseの場合は作成しない
+    if create_init and package_name is not None:
         init_file = modules_dir / '__init__.py'
         if '__init__.py' not in structure and not init_file.exists():
             init_file.write_text('', encoding='utf-8')

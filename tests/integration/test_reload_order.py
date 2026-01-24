@@ -9,6 +9,8 @@
 
 import textwrap
 
+from deep_reloader import deep_reload
+
 from ..test_utils import create_test_modules, update_module
 
 
@@ -52,8 +54,6 @@ def test_child_reload_before_parent_import(tmp_path):
     update_module(modules_dir, 'config.py', 'VERSION = "2.0"')
 
     # deep reloadを実行
-    from deep_reloader import deep_reload
-
     deep_reload(test_package.app)
 
     # 重要: APP_TITLEはモジュールインポート時に生成される
