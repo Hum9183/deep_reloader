@@ -64,7 +64,7 @@ class SymbolExtractor:
         """
         # from句を取得
         from_clause = FromClause.resolve(self.module, node.level, node.module)
-        if self._should_skip(from_clause):
+        if from_clause is None:
             return []
 
         # ワイルドカードの場合はシンボルを展開、通常はAST→文字列変換
@@ -73,7 +73,11 @@ class SymbolExtractor:
         else:
             import_clause = ImportClause([alias.name for alias in node.names])
 
-        return import_clause.to_dependencies(from_clause, node.level, node.module)
+        dependencies = import_clause.to_dependencies(from_clause, node.level, node.module)
+
+        # 自分自身への依存のみをフィルタリング
+        # 例: from . import helper の場合、(testpkg.helper, None) は残し、(testpkg, ImportClause(['helper'])) は除外
+        return [(dep_module, dep_clause) for dep_module, dep_clause in dependencies if dep_module is not self.module]
 
     def _parse_ast(self) -> Optional[ast.AST]:
         """モジュールをASTにパース"""
