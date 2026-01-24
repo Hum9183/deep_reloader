@@ -147,20 +147,14 @@ pytest tests/ -q
     - 例外クラスをリロード対象から除外する
     - アプリケーションを再起動する
 
-- **import文非対応**（将来的に対応予定）
-  - `import module` 形式の依存関係は現在は解析対象外です
-  - 現在対応しているのはfrom-import形式のみです：
+- **import文非対応**（仕様）
+  - `import xxx.yyy` 形式の依存関係は対応していません
+  - **理由**: `import xxx.yyy`はPythonのimport機構が親モジュール（`xxx`）に自動的に属性（`yyy`）を追加しますが、リロード時にこの属性が失われます。復元するには親モジュールへの属性追加を追跡し、リロード時に手動で復元する複雑な処理が必要で、`from xxx import yyy`よりもはるかに複雑になるため、対応を見送っています
+  - **対応しているのはfrom-import形式のみです**:
     - `from xxx import yyy` 形式
     - `from .xxx import yyy` 形式
     - `from . import yyy` 形式
-
-  - **現状の推奨**:
-    - from-import を使用してください（例: `from deep_reloader import deep_reload`）
-    - `import xxx` 形式は将来のバージョンで対応予定です
-
-  - **将来の対応予定**:
-    - `import mypackage` のような同一パッケージ内のモジュールインポートを検出し、依存関係として追跡
-    - 標準ライブラリや外部ライブラリは引き続き除外
+  - **推奨**: from-import を使用してください（例: `from deep_reloader import deep_reload`）
 
 - **単一パッケージのみリロード**（仕様）
   - `deep_reload()`は、指定されたモジュールと同じパッケージに属するモジュールのみをリロードします
@@ -172,6 +166,14 @@ pytest tests/ -q
     deep_reload(myutils.helper)   # myutilsパッケージをリロード
     deep_reload(myfunctions.main) # myfunctionsパッケージをリロード
     ```
+
+- **パッケージ構造が必須**（仕様）
+  - `deep_reload()`はパッケージ化されたモジュールのみをサポートします
+  - **理由**: 単体モジュール（`__init__.py`なし）では、標準ライブラリとユーザーコードの区別ができず、システムモジュールを誤ってリロードする危険性があるため
+  - **非対応**: 単体の`.py`ファイル（例: `~/maya/scripts/my_tool.py`）
+  - **対応**: パッケージ化されたモジュール（例: `~/maya/scripts/my_project/__init__.py`）
+  - **単体モジュールの場合**: 標準の`importlib.reload()`を使用してください
+  - **複数モジュールを使用する場合**: パッケージ化してください（`__init__.py`を含むディレクトリ構造）
 
 ### リリース状況
 - ✅ コア機能実装完了（from-import対応）
