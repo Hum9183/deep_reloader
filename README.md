@@ -75,20 +75,20 @@ deep_reload(your_module)
 ### pytest実行
 
 ```shell
-# パッケージの親ディレクトリに移動 (例)
-cd ~/Documents/maya/scripts/
+# リポジトリルートに移動（例）
+cd ~/Documents/maya/scripts/deep_reloader
 
 # 全テスト実行
-python -m pytest deep_reloader/tests/ -v
+pytest tests/ -v
 
 # 特定のテストファイル実行
-python -m pytest deep_reloader/tests/integration/test_absolute_import.py -v
+pytest tests/integration/test_absolute_import.py -v
 
 # より詳細な出力
-python -m pytest deep_reloader/tests/ -vv
+pytest tests/ -vv
 
 # 簡潔な出力
-python -m pytest deep_reloader/tests/ -q
+pytest tests/ -q
 ```
 
 ### 動作確認済み環境
