@@ -8,7 +8,7 @@ sys.modules[name] = self.module により、リロード後も既存のモジュ
 """
 import textwrap
 
-from .test_utils import create_test_modules, update_module
+from ..test_utils import create_test_modules, update_module
 
 
 def test_module_reference_consistency(tmp_path):

@@ -9,7 +9,7 @@
 
 import textwrap
 
-from .test_utils import create_test_modules, update_module
+from ..test_utils import create_test_modules, update_module
 
 
 def test_child_reload_before_parent_import(tmp_path):

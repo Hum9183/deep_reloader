@@ -7,7 +7,7 @@ from module import name as alias の形式でインポートした場合、
 
 import textwrap
 
-from .test_utils import create_test_modules, update_module
+from ..test_utils import create_test_modules, update_module
 
 
 def test_import_with_alias(tmp_path):

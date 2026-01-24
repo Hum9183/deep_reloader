@@ -66,7 +66,7 @@ try-except文による相対インポートと絶対インポートの自動切�
 import sys
 import textwrap
 
-from .test_utils import create_test_modules, update_module
+from ..test_utils import create_test_modules, update_module
 
 
 def test_architecture_demonstration(tmp_path):

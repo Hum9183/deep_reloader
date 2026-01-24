@@ -5,7 +5,7 @@ A → B → A のような循環インポート構造が正しくリロードさ
 
 import textwrap
 
-from .test_utils import create_test_modules, update_module
+from ..test_utils import create_test_modules, update_module
 
 
 def test_circular_import(tmp_path):
