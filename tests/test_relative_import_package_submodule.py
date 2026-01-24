@@ -14,16 +14,13 @@
 
 import textwrap
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
+from .test_utils import create_test_modules, update_module
 
 
 def test_package_init_imports_submodule(tmp_path):
     """
     パッケージの__init__.pyがサブモジュールをインポートしている場合のテスト
-    
+
     構造:
         parent_package/
         ├── __init__.py
@@ -33,7 +30,7 @@ def test_package_init_imports_submodule(tmp_path):
         └── parent_pkg/
             ├── __init__.py (from .core_api import create_node)
             └── core_api.py (def create_node(): return "v1")
-    
+
     user.py が parent_pkg パッケージをインポートしたとき、
     core_api.py のサブモジュール内の create_node() が更新されるか
     """
@@ -60,7 +57,7 @@ def test_package_init_imports_submodule(tmp_path):
             'middle_package/user.py': textwrap.dedent(
                 """
                 from ..parent_pkg import create_node
-                
+
                 def get_node_info():
                     return create_node()
                 """
@@ -92,10 +89,3 @@ def test_package_init_imports_submodule(tmp_path):
 
     # 更新された値を確認
     assert test_pkg.middle_package.user.get_node_info() == 'v2'
-
-
-if __name__ == '__main__':
-    from test_utils import run_test_as_script
-
-    run_test_as_script(test_package_init_imports_submodule, __file__)
-

@@ -67,31 +67,11 @@ Pythonパスが通っている場所であればどこでも配置可能です�
 
 ## テスト実行
 
-**注意: テストはVSCodeやコマンドラインで実行してください。Maya内部での実行はサポートしていません。**
+**注意: テストはpytestで実行してください。Maya内部での実行はサポートしていません。**
 
-このプロジェクトでは、スクリプト実行とpytest実行の両方をサポートしています。Maya開発環境での利便性を考慮し、pytestが利用できない環境でも直接スクリプトとしてテストを実行できます。
-
-### スクリプト実行
-
-各テストファイルを直接Python スクリプトとして実行できます：
-
-#### コマンドライン実行
-
-```shell
-# 全テストを一括実行（フルパス指定）
-python ~/Documents/maya/scripts/deep_reloader/tests/test_runner.py
-
-# 個別テスト実行（フルパス指定）
-python ~/Documents/maya/scripts/deep_reloader/tests/test_absolute_import_basic.py
-```
-
-#### VSCode実行
-
-VSCodeでテストファイルを開いて「▶️ Run Python File」ボタンで実行できます。
+このプロジェクトのテストはpytest専用です。開発環境でpytestを使用してテストを実行してください。
 
 ### pytest実行
-
-pytestが利用可能な環境では、より高機能なテスト実行が可能です：
 
 ```shell
 # パッケージの親ディレクトリに移動 (例)
@@ -105,13 +85,16 @@ python -m pytest deep_reloader/tests/test_absolute_import_basic.py -v
 
 # より詳細な出力
 python -m pytest deep_reloader/tests/ -vv
+
+# 簡潔な出力
+python -m pytest deep_reloader/tests/ -q
 ```
 
 ### 動作確認済み環境
 
 **テスト開発環境（Maya以外）:**
 - Python 3.11.9+（現在の開発環境で検証済み）
-- pytest 8.4.2+（テスト実行時のみ、現在の開発環境で検証済み）
+- pytest 8.4.2+（テスト実行に必須）
 
 **注意**: 上記はライブラリのテスト・開発で使用している環境です。Maya内での実行環境とは異なります。Mayaのサポートバージョンはまだ確定していません。
 

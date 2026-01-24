@@ -6,10 +6,7 @@ from . import module1, module2 のような形式のインポートが
 
 import textwrap
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
+from .test_utils import create_test_modules, update_module
 
 
 def test_dot_only_module_import(tmp_path):
@@ -106,15 +103,3 @@ def test_dot_only_module_import_with_function(tmp_path):
 
     # 更新確認
     assert app.run() == 'App: v2'
-
-
-if __name__ == '__main__':
-    from test_utils import run_test_as_script
-
-    print('=== Test 1: from . import module ===')
-    run_test_as_script(test_dot_only_module_import, __file__)
-
-    print('\n=== Test 2: from . import module (with function) ===')
-    run_test_as_script(test_dot_only_module_import_with_function, __file__)
-
-    print('\n全テスト成功！')

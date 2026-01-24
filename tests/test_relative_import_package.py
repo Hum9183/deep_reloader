@@ -1,9 +1,6 @@
 import textwrap
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
+from .test_utils import create_test_modules, update_module
 
 
 def test_package_level_relative_import(tmp_path):
@@ -59,9 +56,3 @@ def test_package_level_relative_import(tmp_path):
 
     # 更新された値を確認
     assert info.get_full_info() == 'Child module - Package version: 2.5.0'
-
-
-if __name__ == '__main__':
-    from test_utils import run_test_as_script
-
-    run_test_as_script(test_package_level_relative_import, __file__)

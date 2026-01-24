@@ -66,21 +66,7 @@ try-except文による相対インポートと絶対インポートの自動切�
 import sys
 import textwrap
 
-# === インポート戦略の実装例 ===
-# スクリプト実行を優先し、pytest実行をフォールバックとする
-# この仕組みにより、同一コードが両方の環境で動作する
-try:
-    # スクリプト実行時（パッケージとして認識されない）
-    # 実行コマンド例:
-    # cd c:\Users\jiang\OneDrive\ドキュメント\maya\scripts\deep_reloader
-    # python tests/test_architecture_demo.py
-    from test_utils import create_test_modules, update_module
-except ImportError:
-    # pytest実行時（パッケージとして認識される）
-    # 実行コマンド例:
-    # cd c:\Users\jiang\OneDrive\ドキュメント\maya\scripts
-    # python -m pytest deep_reloader/tests/test_architecture_demo.py
-    from .test_utils import create_test_modules, update_module
+from .test_utils import create_test_modules, update_module
 
 
 def test_architecture_demonstration(tmp_path):
@@ -247,9 +233,3 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"NG: 失敗: {e}")
         raise
-
-    print()
-    print("=" * 60)
-    print("OK: 全てのテストが正常に完了しました")
-    print("テストアーキテクチャが正常に動作しています")
-    print("=" * 60)

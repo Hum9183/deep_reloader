@@ -9,12 +9,7 @@ import textwrap
 from pathlib import Path
 from types import ModuleType
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
-
-from deep_reloader.symbol_extractor import SymbolExtractor
+from .test_utils import create_test_modules, update_module
 
 
 def test_relative_wildcard_with_all(tmp_path):
@@ -253,9 +248,3 @@ def test_relative_wildcard_with_subpackage(tmp_path):
         assert main.get_value() == 999
     finally:
         sys.path.remove(str(tmp_path))
-
-
-if __name__ == '__main__':
-    from test_utils import run_test_as_script
-
-    run_test_as_script(test_relative_wildcard_with_all, __file__)

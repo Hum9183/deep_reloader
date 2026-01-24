@@ -7,10 +7,7 @@ from module import name as alias の形式でインポートした場合、
 
 import textwrap
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
+from .test_utils import create_test_modules, update_module
 
 
 def test_import_with_alias(tmp_path):
@@ -191,3 +188,9 @@ def test_import_mixed_alias_and_original(tmp_path):
     assert app.get_settings() == "updated1-updated2"
     assert app.S1 == "updated1", "エイリアス S1 が更新されていない"
     assert app.SETTING2 == "updated2", "元の名前 SETTING2 が更新されていない"
+
+
+if __name__ == '__main__':
+    from test_utils import run_test_as_script
+
+    run_test_as_script(test_import_with_alias, __file__)

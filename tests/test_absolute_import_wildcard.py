@@ -1,9 +1,6 @@
 import textwrap
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
+from .test_utils import create_test_modules, update_module
 
 
 def test_wildcard_from_import_reload(tmp_path):
@@ -53,9 +50,3 @@ def test_wildcard_from_import_reload(tmp_path):
     # 更新された値を確認
     assert test_package.b.x == 100
     assert test_package.b.y == 200
-
-
-if __name__ == '__main__':
-    from test_utils import run_test_as_script
-
-    run_test_as_script(test_wildcard_from_import_reload, __file__)

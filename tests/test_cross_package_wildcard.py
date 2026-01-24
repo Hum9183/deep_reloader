@@ -11,10 +11,7 @@ import sys
 import textwrap
 from pathlib import Path
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
+from .test_utils import create_test_modules, update_module
 
 
 def test_cross_package_wildcard_single_reload(tmp_path):
@@ -221,9 +218,3 @@ def test_cross_package_wildcard_submodule_double_reload(tmp_path):
 
     # 更新が反映される
     assert app.show_config() == "SETTING=updated, get_setting=setting_updated"
-
-
-if __name__ == '__main__':
-    from test_utils import run_test_as_script
-
-    run_test_as_script(test_cross_package_wildcard_double_reload, __file__)

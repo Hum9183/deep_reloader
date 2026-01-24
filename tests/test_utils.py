@@ -1,18 +1,13 @@
 import importlib
 import sys
-import tempfile
 from pathlib import Path
-from typing import Callable, Dict, Optional, Set
+from typing import Dict, Optional, Set
 
-# テストで使用した一時ディレクトリのパスを記録（pytest/スクリプト実行の両方）
+# テストで使用した一時ディレクトリのパスを記録
 _test_temp_dirs: Set[Path] = set()
-
-# パッケージ親ディレクトリのパスを記録（スクリプト実行時のみ）
-_package_parent_path: Optional[str] = None
 
 # ============================================================
 # テスト環境クリーンアップ（インフラ層）
-# pytest/スクリプト実行の両方で使用される共通クリーンアップ機能
 # ============================================================
 
 
@@ -57,16 +52,9 @@ def clear_test_environment():
     # クリーンアップ後は記録をクリア
     _test_temp_dirs.clear()
 
-    # パッケージ親ディレクトリのパスを削除
-    global _package_parent_path
-    if _package_parent_path and _package_parent_path in sys.path:
-        sys.path.remove(_package_parent_path)
-    _package_parent_path = None
-
 
 # ============================================================
 # テストヘルパー関数
-# 各テスト関数が直接使用するユーティリティ
 # ============================================================
 
 
@@ -192,82 +180,3 @@ def update_module(modules_dir: Path, filename: str, content: str) -> None:
 
     file_path = modules_dir / filename
     file_path.write_text(textwrap.dedent(content), encoding='utf-8')
-
-
-# ============================================================
-# スクリプト実行サポート
-# スクリプト実行時のみ使用（pytestは使わない）
-# ============================================================
-
-
-def setup_package_parent_path(test_file_path: str) -> None:
-    """パッケージの親ディレクトリをsys.pathに追加してパッケージのインポートをサポート"""
-    global _package_parent_path
-    base_path = Path(test_file_path)
-    package_parent_dir = base_path.parent.parent.parent
-    package_parent_dir_str = str(package_parent_dir)
-
-    if package_parent_dir_str not in sys.path:
-        sys.path.insert(0, package_parent_dir_str)
-        _package_parent_path = package_parent_dir_str
-
-
-def run_test_as_script(test_function: Callable[[Path], None], test_file_path: str) -> None:
-    """
-    スクリプト実行時の共通ロジック
-
-    pytestが自動的に提供する機能をスクリプト実行時に自動で代替実装：
-    - パッケージパスの設定（pytestのカレントディレクトリベース実行）
-    - 一時ディレクトリの作成（pytestのtmp_pathフィクスチャ）
-    - テスト前後のモジュールクリーンアップ（pytestの分離機能）
-    - 例外処理とテスト結果の表示（pytestのレポート機能）
-
-    これにより、pytestとスクリプト実行の両方で同じテストロジックが動作する
-    テストアーキテクチャを実現する。
-
-    Args:
-        test_function: 実行するテスト関数
-                      pytest形式: (tmp_path: Path) -> None
-        test_file_path: テストファイルの絶対パス（通常は __file__ を渡す）
-
-    Raises:
-        AssertionError: テスト内でのアサーション失敗
-        ImportError: モジュールインポートエラー
-        ModuleNotFoundError: モジュールが見つからない
-        AttributeError: 属性アクセスエラー
-        OSError: ファイルシステム関連エラー
-        Exception: その他の予期しないエラー
-
-    Example:
-        >>> def test_my_function(tmp_path):
-        ...     modules = create_test_modules(tmp_path, None, {'test.py': 'x = 1'})
-        ...     # テストコード（pytestと同じ形式）
-        >>>
-        >>> if __name__ == "__main__":
-        ...     # pytestの機能を自動で代替してスクリプト実行
-        ...     run_test_as_script(test_my_function, __file__)
-    """
-    # パス設定
-    setup_package_parent_path(test_file_path)
-
-    try:
-        # 一時ディレクトリでテスト実行
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-
-            # テスト実行
-            test_function(tmp_path)
-            print('OK: テスト成功！')
-
-    except (AssertionError, ImportError, ModuleNotFoundError, AttributeError) as e:
-        print(f'NG: テスト失敗: {e}')
-        raise
-    except OSError as e:
-        print(f'NG: ファイルシステムエラー: {e}')
-        raise
-    except Exception as e:
-        print(f'NG: 予期しないエラー: {e}')
-        raise
-    finally:
-        # テスト後のクリーンアップ
-        clear_test_environment()

@@ -10,12 +10,7 @@ import sys
 import textwrap
 from pathlib import Path
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
-
-from deep_reloader.symbol_extractor import SymbolExtractor
+from .test_utils import create_test_modules, update_module
 
 
 def test_relative_subpackage_wildcard(tmp_path):
@@ -334,9 +329,3 @@ def test_absolute_submodule_wildcard(tmp_path):
 
     # 更新された値を確認
     assert app.get_values() == "updated_value-updated_config"
-
-
-if __name__ == '__main__':
-    from test_utils import run_test_as_script
-
-    run_test_as_script(test_relative_subpackage_wildcard, __file__)

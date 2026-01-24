@@ -1,9 +1,6 @@
 import textwrap
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
+from .test_utils import create_test_modules, update_module
 
 
 def test_chained_from_import_reload(tmp_path):
@@ -54,9 +51,3 @@ def test_chained_from_import_reload(tmp_path):
     assert test_package.a.value == 777
     assert test_package.b.value == 777
     assert test_package.c.value == 777
-
-
-if __name__ == "__main__":
-    from test_utils import run_test_as_script
-
-    run_test_as_script(test_chained_from_import_reload, __file__)

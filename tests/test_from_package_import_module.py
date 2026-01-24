@@ -8,10 +8,7 @@ _try_import_submodule() の機能をテスト:
 import sys
 import textwrap
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
+from .test_utils import create_test_modules, update_module
 
 
 def test_relative_import_submodule(tmp_path):
@@ -266,3 +263,13 @@ if __name__ == '__main__':
     run_test_as_script(test_relative_import_package, __file__)
 
     print('\n全テスト成功！')
+
+
+if __name__ == '__main__':
+    from test_utils import run_test_as_script
+
+    print('=== Test 1: 相対インポート - from .utils import helper ===')
+    run_test_as_script(test_relative_import_submodule, __file__)
+
+    print('\n=== Test 2: 絶対インポート - from package import submodule ===')
+    run_test_as_script(test_absolute_import_submodule, __file__)

@@ -6,10 +6,7 @@ from . import subpkg のような形式で、サブパッケージをインポ�
 
 import textwrap
 
-try:
-    from .test_utils import create_test_modules, update_module
-except ImportError:
-    from test_utils import create_test_modules, update_module
+from .test_utils import create_test_modules, update_module
 
 
 def test_import_subpackage_directly(tmp_path):
@@ -110,15 +107,3 @@ def test_import_subpackage_and_module_mixed(tmp_path):
 
     # 更新確認
     assert main.get_values() == '999-888'
-
-
-if __name__ == '__main__':
-    from test_utils import run_test_as_script
-
-    print('=== Test 1: from . import subpackage ===')
-    run_test_as_script(test_import_subpackage_directly, __file__)
-
-    print('\n=== Test 2: from . import subpackage, module ===')
-    run_test_as_script(test_import_subpackage_and_module_mixed, __file__)
-
-    print('\n全テスト成功！')
