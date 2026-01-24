@@ -13,6 +13,26 @@ Pythonモジュールの依存関係を解析して、再帰的にリロード�
 - **相対インポート対応**: パッケージ内の相対インポートを正しく処理
 - **循環参照対応**: Pythonで動作する循環インポートを正しくリロード
 
+## インストール
+
+Pythonパスが通っている場所であればどこでも配置可能です。
+本READMEでは一般的なMayaのscriptsフォルダーを例として説明します。
+
+```
+~/Documents/maya/scripts/  (例)
+└── deep_reloader/
+    ├── __init__.py
+    ├── _metadata.py
+    ├── deep_reloader.py
+    ├── from_clause.py
+    ├── import_clause.py
+    ├── module_info.py
+    ├── symbol_extractor.py
+    ├── LICENSE
+    ├── README.md
+    └── tests/
+```
+
 ## 使用方法
 
 ### 基本的な使用方法
@@ -46,25 +66,6 @@ deep_reload(your_module)
 - `logging.INFO`: モジュールリロードの状況を表示（デフォルト）
 - `logging.WARNING`: エラーと警告のみ表示
 
-## インストール
-
-Pythonパスが通っている場所であればどこでも配置可能です。
-本READMEでは一般的なMayaのscriptsフォルダーを例として説明します。
-
-```
-~/Documents/maya/scripts/  (例)
-└── deep_reloader/
-    ├── __init__.py
-    ├── _metadata.py
-    ├── deep_reloader.py
-    ├── imported_symbols.py
-    ├── module_info.py
-    ├── symbol_extractor.py
-    ├── LICENSE
-    ├── README.md
-    └── tests/          # テストファイル（開発・デバッグ用）
-```
-
 ## テスト実行
 
 **注意: テストはpytestで実行してください。Maya内部での実行はサポートしていません。**
@@ -81,7 +82,7 @@ cd ~/Documents/maya/scripts/
 python -m pytest deep_reloader/tests/ -v
 
 # 特定のテストファイル実行
-python -m pytest deep_reloader/tests/test_absolute_import_basic.py -v
+python -m pytest deep_reloader/tests/integration/test_absolute_import.py -v
 
 # より詳細な出力
 python -m pytest deep_reloader/tests/ -vv
@@ -146,17 +147,20 @@ python -m pytest deep_reloader/tests/ -q
     - 例外クラスをリロード対象から除外する
     - アプリケーションを再起動する
 
-- **import文非対応**（仕様）
-  - `import module` 形式の依存関係は解析対象外です
-  - 現在対応しているのはfrom-import形式です。具体的には、
+- **import文非対応**（将来的に対応予定）
+  - `import module` 形式の依存関係は現在は解析対象外です
+  - 現在対応しているのはfrom-import形式のみです：
     - `from xxx import yyy` 形式
     - `from .xxx import yyy` 形式
     - `from . import yyy` 形式
-    - の3つです
 
-  - **理由**:
-    - `import xxx` は主に標準ライブラリや外部ライブラリで使用され、これらはリロード対象外です
-    - 自作パッケージ内では from-import を使うのが一般的な慣習です
+  - **現状の推奨**:
+    - from-import を使用してください（例: `from deep_reloader import deep_reload`）
+    - `import xxx` 形式は将来のバージョンで対応予定です
+
+  - **将来の対応予定**:
+    - `import mypackage` のような同一パッケージ内のモジュールインポートを検出し、依存関係として追跡
+    - 標準ライブラリや外部ライブラリは引き続き除外
 
 - **単一パッケージのみリロード**（仕様）
   - `deep_reload()`は、指定されたモジュールと同じパッケージに属するモジュールのみをリロードします
@@ -171,7 +175,7 @@ python -m pytest deep_reloader/tests/ -q
 
 ### リリース状況
 - ✅ コア機能実装完了（from-import対応）
-- ✅ テストスイート（12テスト）
+- ✅ テストスイート
 - ✅ ドキュメント整備
 - ✅ Maya環境での動作検証
 - ✅ 循環インポート対応
