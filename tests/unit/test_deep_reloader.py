@@ -10,7 +10,7 @@ from types import ModuleType
 from unittest.mock import MagicMock, Mock, patch
 
 from ...deep_reloader import _build_tree, _clear_single_pycache
-from ...module_info import ModuleInfo
+from ...module_node import ModuleNode
 
 
 def test_build_tree_simple_module():
@@ -28,7 +28,7 @@ def test_build_tree_simple_module():
 
         result = _build_tree(mock_module, visited, target_package)
 
-        assert isinstance(result, ModuleInfo)
+        assert isinstance(result, ModuleNode)
         assert result.module is mock_module
         assert len(result.children) == 0
         assert 'testpkg.main' in visited
@@ -102,7 +102,7 @@ def test_build_tree_prevents_circular_import():
         result = _build_tree(mock_module, visited, target_package)
 
         # ノードは作成されるが、extractorは呼ばれない（子の展開がスキップされる）
-        assert isinstance(result, ModuleInfo)
+        assert isinstance(result, ModuleNode)
         assert result.module is mock_module
         mock_extractor_class.assert_not_called()
 

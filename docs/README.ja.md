@@ -28,7 +28,7 @@ Pythonパスが通っている場所であればどこでも配置可能です�
     ├── deep_reloader.py
     ├── from_clause.py
     ├── import_clause.py
-    ├── module_info.py
+    ├── module_node.py
     ├── symbol_extractor.py
     ├── LICENSE
     ├── README.md

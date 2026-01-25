@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
-from .module_info import ModuleInfo
+from .module_node import ModuleNode
 from .symbol_extractor import SymbolExtractor
 
 logger = logging.getLogger(__name__)
@@ -66,9 +66,9 @@ def deep_reload(module: ModuleType) -> None:
     root.reload()
 
 
-def _build_tree(module: ModuleType, visited: set, target_package: str) -> ModuleInfo:
+def _build_tree(module: ModuleType, visited: set, target_package: str) -> ModuleNode:
     """
-    AST 解析して ModuleInfo ツリーを構築
+    AST 解析して ModuleNode ツリーを構築
 
     Args:
         module: 解析対象のモジュール
@@ -80,7 +80,7 @@ def _build_tree(module: ModuleType, visited: set, target_package: str) -> Module
         target_packageに一致しないモジュール（組み込みモジュールやサードパーティライブラリ、その他の自作パッケージ）は
         スキップされ、リロード対象から除外されます。
     """
-    node = ModuleInfo(module)
+    node = ModuleNode(module)
 
     # 循環インポート検出: すでに訪問済みなら子の展開はスキップ（無限ループ防止）
     # ノード自体は作成して返す（将来のデバッグ出力で循環参照を可視化するため）
@@ -103,9 +103,9 @@ def _build_tree(module: ModuleType, visited: set, target_package: str) -> Module
     return node
 
 
-def _clear_pycache_recursive(node: ModuleInfo) -> None:
+def _clear_pycache_recursive(node: ModuleNode) -> None:
     """
-    ModuleInfo ツリー全体を再帰的にたどって __pycache__ を削除
+    ModuleNode ツリー全体を再帰的にたどって __pycache__ を削除
     """
     _clear_single_pycache(node.module)
     for child in node.children:

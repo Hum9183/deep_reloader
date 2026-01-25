@@ -9,14 +9,14 @@ from .import_clause import ImportClause
 logger = logging.getLogger(__name__)
 
 
-class ModuleInfo:
+class ModuleNode:
     """
     モジュールとその子モジュール(from-import)情報を保持するクラス
     """
 
     def __init__(self, module: ModuleType) -> None:
         self.module: ModuleType = module
-        self.children: List['ModuleInfo'] = []
+        self.children: List['ModuleNode'] = []
         self.symbols: Optional[ImportClause] = None
 
     def reload(self, visited=None) -> None:
@@ -53,21 +53,14 @@ class ModuleInfo:
         for child in self.children:
             child.reload(visited)
 
-        # 一時的にsys.modulesから削除してキャッシュをクリア
-        sys.modules.pop(name, None)
-        importlib.invalidate_caches()
-
-        # 新しいモジュールをインポート
-        new_module = importlib.import_module(name)
+        # importlib.reload()を使用してリロード
+        # これにより、sys.modulesから削除せずに安全にリロードできる
+        new_module = importlib.reload(self.module)
 
         # 子のリロード後、from-importシンボルを新しいモジュールにコピー
         # （new_moduleの関数の__globals__に正しい値を設定するため）
         for child in self.children:
             if child.symbols is not None:
-                # child.moduleは依存先モジュール（from_module）
-                # symbolsに含まれる名前の値を、sys.modulesから取得するか、
-                # child.moduleから取得してコピーする
-                # モジュールの場合、sys.modulesから新しいモジュールを取得
                 source_module = sys.modules.get(child.module.__name__, child.module)
                 self._copy_symbols_to(child.symbols, source_module, new_module)
 
@@ -83,9 +76,6 @@ class ModuleInfo:
 
         # sys.modulesをself.moduleで上書き
         sys.modules[name] = self.module
-
-        # 訪問済みとしてマーク
-        visited.add(name)
 
         logger.debug(f'RELOADED {name}')
 
