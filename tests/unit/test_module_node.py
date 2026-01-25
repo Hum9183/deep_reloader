@@ -19,7 +19,7 @@ def test_init():
 
     assert info.module is mock_module
     assert info.children == []
-    assert info.symbols is None
+    assert info.import_clause is None
 
 
 def test_children_management():
@@ -47,20 +47,20 @@ def test_children_management():
     assert parent_info.children[1] is child_info2
 
 
-def test_symbols_management():
-    """シンボルの設定と取得ができることを確認"""
+def test_import_clause_management():
+    """import_clauseの設定と取得ができることを確認"""
     mock_module = Mock(spec=ModuleType)
     info = ModuleNode(mock_module)
 
     # 初期状態
-    assert info.symbols is None
+    assert info.import_clause is None
 
     # ImportClauseを設定
-    symbols = ImportClause(['func1', 'func2', 'VALUE'])
-    info.symbols = symbols
+    import_clause = ImportClause(['func1', 'func2', 'VALUE'])
+    info.import_clause = import_clause
 
-    assert info.symbols is symbols
-    assert list(info.symbols) == ['func1', 'func2', 'VALUE']
+    assert info.import_clause is import_clause
+    assert list(info.import_clause) == ['func1', 'func2', 'VALUE']
 
 
 def test_tree_structure():

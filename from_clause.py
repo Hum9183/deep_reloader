@@ -11,12 +11,12 @@ class FromClause:
 
     Attributes:
         _module: from句で指定されたモジュール
-        _base_module: 基準となるモジュール（import文が記述されているモジュール）
+        _importing_module: 基準となるモジュール（import文が記述されているモジュール）
     """
 
     def __init__(self, module: ModuleType, base_module: ModuleType) -> None:
         self._module = module
-        self._base_module = base_module
+        self._importing_module = base_module
 
     @property
     def module(self) -> ModuleType:
@@ -57,7 +57,7 @@ class FromClause:
 
         return cls(module, base_module)
 
-    def try_import_as_module(self, name: str, is_relative_dot_only: bool) -> Tuple[bool, Optional[ModuleType]]:
+    def try_import_as_module(self, name: str) -> Tuple[bool, Optional[ModuleType]]:
         """nameをモジュールとしてインポート試行（モジュール/アトリビュート判定のため）
 
         モジュール/アトリビュートの分類判定に使用。
@@ -65,7 +65,6 @@ class FromClause:
 
         Args:
             name: インポートする名前
-            is_relative_dot_only: from . import yyy パターンかどうか
 
         Returns:
             (is_module, module): is_moduleがTrueならモジュール、Falseならアトリビュート
@@ -73,7 +72,7 @@ class FromClause:
         # どちらのパターンでもサブモジュールとしてインポートを試行
         module_candidate = self._try_import_submodule(name)
 
-        is_module = module_candidate is not None and module_candidate is not self._base_module
+        is_module = module_candidate is not None and module_candidate is not self._importing_module
         return (is_module, module_candidate if is_module else None)
 
     def _try_import_submodule(self, name: str) -> Optional[ModuleType]:

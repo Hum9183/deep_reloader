@@ -56,8 +56,8 @@ def deep_reload(module: ModuleType) -> None:
     # - 依存関係ツリーの視覚的表示（階層構造、インデント付き）
     # - 各モジュールの詳細情報（パス、サイズ、最終更新時刻）
     # - スキップされるモジュールの理由と一覧
-    visited = set()  # 循環インポート検出用
-    root = _build_tree(module, visited, target_package)
+    visited_modules = set()  # 循環インポート検出用
+    root = _build_tree(module, visited_modules, target_package)
 
     # ツリー全体の __pycache__ を削除
     _clear_pycache_recursive(root)
@@ -66,13 +66,13 @@ def deep_reload(module: ModuleType) -> None:
     root.reload()
 
 
-def _build_tree(module: ModuleType, visited: set, target_package: str) -> ModuleNode:
+def _build_tree(module: ModuleType, visited_modules: set, target_package: str) -> ModuleNode:
     """
     AST 解析して ModuleNode ツリーを構築
 
     Args:
         module: 解析対象のモジュール
-        visited: 循環インポート検出用の訪問済みモジュールセット
+        visited_modules: 循環インポート検出用の訪問済みモジュールセット
         target_package: リロード対象のパッケージ名（例: 'routinerecipe'）
                        このパッケージに属するモジュールのみをリロード対象とする
 
@@ -84,20 +84,20 @@ def _build_tree(module: ModuleType, visited: set, target_package: str) -> Module
 
     # 循環インポート検出: すでに訪問済みなら子の展開はスキップ（無限ループ防止）
     # ノード自体は作成して返す（将来のデバッグ出力で循環参照を可視化するため）
-    if module.__name__ in visited:
+    if module.__name__ in visited_modules:
         return node
 
-    visited.add(module.__name__)
+    visited_modules.add(module.__name__)
 
     extractor = SymbolExtractor(module)
-    for child_module, symbols in extractor.extract():
+    for child_module, import_clause in extractor.extract():
         # ターゲットパッケージに属するモジュールのみをツリーに追加
         if not child_module.__name__.startswith(target_package):
             logger.debug(f'Skipped module (not in target package): {child_module.__name__}')
             continue
 
-        child_node = _build_tree(child_module, visited, target_package)
-        child_node.symbols = symbols
+        child_node = _build_tree(child_module, visited_modules, target_package)
+        child_node.import_clause = import_clause
         node.children.append(child_node)
 
     return node

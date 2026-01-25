@@ -12,30 +12,30 @@ logger = logging.getLogger(__name__)
 
 class SymbolExtractor:
     """
-    モジュールのASTを解析して、from-import文の「子モジュール」と「インポートされるシンボル」を抽出するクラス
+    モジュールのASTを解析して、from-import文の「子モジュール」と「インポートされる名前」を抽出するクラス
 
-    子モジュールと、インポートされるシンボル名のペアを(ModuleType, ImportClause)で表現する。
+    子モジュールと、インポートされる名前のペアを(ModuleType, ImportClause)で表現する。
 
     例: from math import sin, cos → (math (ModuleType), ['sin', 'cos'] (ImportClause))
-        この場合、mathが子モジュール、sin・cosがインポートされるシンボル
+        この場合、mathが子モジュール、sin・cosがインポートされる名前
     """
 
     def __init__(self, module: ModuleType) -> None:
         self.module: ModuleType = module
-        self.tree: Optional[ast.AST] = self._parse_ast()
+        self.ast_tree: Optional[ast.AST] = self._parse_ast()
 
     def extract(self) -> List[Tuple[ModuleType, Optional[ImportClause]]]:
-        """(子モジュール, インポートされたシンボル) のリストを返す"""
-        if self.tree is None:
+        """(子モジュール, インポートされた名前) のリストを返す"""
+        if self.ast_tree is None:
             return []
 
-        results: List[Tuple[ModuleType, Optional[ImportClause]]] = []
-        for node in ast.walk(self.tree):
+        child_module_import_clause: List[Tuple[ModuleType, Optional[ImportClause]]] = []
+        for node in ast.walk(self.ast_tree):
             if isinstance(node, ast.ImportFrom):
                 # 1つのimport文から複数の依存関係が生まれる可能性があるためextendを使用
                 # 例: from . import module1, module2, func → 最大3つのタプルが返る
-                results.extend(self._extract_from_node(node))
-        return results
+                child_module_import_clause.extend(self._extract_from_node(node))
+        return child_module_import_clause
 
     def _should_skip(self, from_clause: Optional[FromClause]) -> bool:
         """from句をスキップすべきかを判定
@@ -67,13 +67,13 @@ class SymbolExtractor:
         if from_clause is None:
             return []
 
-        # ワイルドカードの場合はシンボルを展開、通常はAST→文字列変換
+        # ワイルドカードの場合は名前を展開、通常はAST→文字列変換
         if node.names[0].name == '*':
             import_clause = ImportClause.expand_wildcard(from_clause)
         else:
             import_clause = ImportClause([alias.name for alias in node.names])
 
-        dependencies = import_clause.to_dependencies(from_clause, node.level, node.module)
+        dependencies = import_clause.to_dependencies(from_clause)
 
         # 自分自身への依存のみをフィルタリング
         # 例: from . import helper の場合、(testpkg.helper, None) は残し、(testpkg, ImportClause(['helper'])) は除外

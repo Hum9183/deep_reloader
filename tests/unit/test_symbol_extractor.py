@@ -18,8 +18,8 @@ def test_init_with_parseable_module():
         extractor = SymbolExtractor(mock_module)
 
         assert extractor.module is mock_module
-        assert extractor.tree is not None
-        assert isinstance(extractor.tree, ast.Module)
+        assert extractor.ast_tree is not None
+        assert isinstance(extractor.ast_tree, ast.Module)
 
 
 def test_init_with_unparseable_module():
@@ -30,7 +30,7 @@ def test_init_with_unparseable_module():
         extractor = SymbolExtractor(mock_module)
 
         assert extractor.module is mock_module
-        assert extractor.tree is None
+        assert extractor.ast_tree is None
 
 
 def test_extract_returns_empty_when_tree_is_none():
@@ -211,7 +211,7 @@ def test_parse_ast_with_syntax_error():
     with patch('inspect.getsource', return_value='invalid python syntax {{{'):
         extractor = SymbolExtractor(mock_module)
 
-        assert extractor.tree is None
+        assert extractor.ast_tree is None
 
 
 def test_parse_ast_with_type_error():
@@ -221,4 +221,4 @@ def test_parse_ast_with_type_error():
     with patch('inspect.getsource', side_effect=TypeError):
         extractor = SymbolExtractor(mock_module)
 
-        assert extractor.tree is None
+        assert extractor.ast_tree is None

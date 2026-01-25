@@ -14,7 +14,7 @@ def test_init():
     clause = FromClause(mock_module, mock_base_module)
 
     assert clause.module is mock_module
-    assert clause._base_module is mock_base_module
+    assert clause._importing_module is mock_base_module
 
 
 def test_resolve_absolute_import():
@@ -106,7 +106,7 @@ def test_try_import_as_module_success():
         mock_submodule = Mock(spec=ModuleType)
         mock_import.return_value = mock_submodule
 
-        is_module, module = clause.try_import_as_module('helper', is_relative_dot_only=False)
+        is_module, module = clause.try_import_as_module('helper')
 
         assert is_module is True
         assert module is mock_submodule
@@ -122,7 +122,7 @@ def test_try_import_as_module_failure():
     clause = FromClause(mock_module, mock_base_module)
 
     with patch('importlib.import_module', side_effect=ModuleNotFoundError):
-        is_module, module = clause.try_import_as_module('some_function', is_relative_dot_only=False)
+        is_module, module = clause.try_import_as_module('some_function')
 
         assert is_module is False
         assert module is None
@@ -142,7 +142,7 @@ def test_try_import_as_module_returns_base_module():
     clause = FromClause(mock_module, mock_base_module)
 
     with patch('importlib.import_module', return_value=mock_base_module):
-        is_module, module = clause.try_import_as_module('name', is_relative_dot_only=False)
+        is_module, module = clause.try_import_as_module('name')
 
         assert is_module is False
         assert module is None
