@@ -134,6 +134,33 @@ isinstance(my_class, MyClass)  # False（my_class 是旧 MyClass 的实例，MyC
 - `from .xxx import yyy` 样式
 - `from . import yyy` 样式
 
+### 在 `__init__.py` 中未明确导入的模块在导入包时不会被检测到（按设计）
+
+由于 AST 分析会解析 `__init__.py` 代码，如果模块未在其中明确导入，则无法检测包下的模块。
+
+**示例**：
+
+文件结构：
+- `mypackage/__init__.py`（空）
+- `mypackage/utils.py`
+- `main.py`
+
+```python
+# main.py
+import mypackage
+
+# 重载包
+deep_reload(mypackage)
+mypackage.utils.some_function()  # utils 不会被重载
+```
+
+**解决方法**：直接重载模块
+```python
+# main.py
+from mypackage import utils
+deep_reload(utils)
+```
+
 ### 仅重载单个包（按设计）
 
 `deep_reload()` 仅重载与传入模块属于同一包的模块。

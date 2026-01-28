@@ -134,6 +134,34 @@ isinstance(my_class, MyClass)  # False（my_classは古いMyClassのインスタ
 - `from .xxx import yyy` 形式
 - `from . import yyy` 形式
 
+### そのパッケージの`__init__.py`で明示的にインポートされていないモジュールはパッケージをインポートしても検出されない（仕様）
+
+AST解析は`__init__.py`のコードを解析するため、そこで明示的にインポートされていない場合そのパッケージ配下のモジュールは検出できません。
+
+**例**:
+
+ファイル構造:
+- `mypackage/__init__.py` (中身は空)
+- `mypackage/utils.py`
+- `main.py`
+
+```python
+# main.py
+import mypackage
+
+# パッケージをリロード
+deep_reload(mypackage)
+mypackage.utils.some_function() # utilsはリロードされない
+```
+
+**回避策**: モジュールを直接リロードする
+```python
+# main.py
+from mypackage import utils
+deep_reload(utils)
+```
+
+
 ### 単一パッケージのみリロード（仕様）
 
 `deep_reload()`は、渡されたモジュールと同じパッケージに属するモジュールのみをリロードします。

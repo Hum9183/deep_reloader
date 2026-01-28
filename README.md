@@ -134,6 +134,33 @@ isinstance(my_class, MyClass)  # False (my_class is an instance of old MyClass, 
 - `from .xxx import yyy` style
 - `from . import yyy` style
 
+### Modules Not Explicitly Imported in `__init__.py` Are Not Detected When Importing the Package (By Design)
+
+Since AST analysis parses the `__init__.py` code, modules under the package cannot be detected if they are not explicitly imported there.
+
+**Example**:
+
+File structure:
+- `mypackage/__init__.py` (empty)
+- `mypackage/utils.py`
+- `main.py`
+
+```python
+# main.py
+import mypackage
+
+# Reload the package
+deep_reload(mypackage)
+mypackage.utils.some_function()  # utils is not reloaded
+```
+
+**Workaround**: Reload the module directly
+```python
+# main.py
+from mypackage import utils
+deep_reload(utils)
+```
+
 ### Single Package Reload Only (By Design)
 
 `deep_reload()` only reloads modules that belong to the same package as the passed module.
