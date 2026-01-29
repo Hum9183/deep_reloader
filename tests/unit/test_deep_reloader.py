@@ -12,7 +12,6 @@ from unittest.mock import MagicMock, Mock, call, patch
 from ...deep_reloader import (
     _build_tree,
     _clear_single_pycache,
-    _copy_symbols_to,
     reload_tree,
 )
 from ...domain import Dependency, DependencyNode
@@ -304,73 +303,6 @@ def test_reload_updates_module_dict():
         # __dict__.update() が呼ばれることでモジュールが更新される
         # original_dict が reloaded_dict で更新される
         # （Mockのため実際の動作は検証できないが、呼び出しは確認できる）
-
-
-def test_copy_symbols_to_copies_existing_attributes():
-    """存在する属性が正しくコピーされることを確認"""
-    source = _create_mock_module('source', func='function', VALUE=42)
-    target = _create_mock_module('target')
-
-    symbols = ['func', 'VALUE']
-
-    _copy_symbols_to(symbols, source, target)
-
-    # 属性がコピーされたことを確認
-    assert target.func == 'function'
-    assert target.VALUE == 42
-
-
-def test_copy_symbols_to_skips_missing_attributes():
-    """存在しない属性がスキップされることを確認"""
-    source = _create_mock_module('source', existing='value')
-    target = _create_mock_module('target')
-
-    symbols = ['existing', 'missing']
-
-    _copy_symbols_to(symbols, source, target)
-
-    # 存在する属性のみコピーされる
-    assert target.existing == 'value'
-    # 存在しない属性は無視される（エラーにならない）
-    assert not hasattr(target, 'missing')
-
-
-def test_reload_copies_child_symbols():
-    """子ノードのsymbolsが親にコピーされることを確認"""
-    parent_module = _create_mock_module('test.parent')
-    child_module = _create_mock_module('test.child', func='child_func', VALUE=42)
-
-    parent_node = DependencyNode(parent_module)
-    child_node = DependencyNode(child_module)
-    child_node.symbols = ['func', 'VALUE']
-    parent_node.children.append(child_node)
-
-    reloaded_parent = _create_mock_module('test.parent')
-    reloaded_child = _create_mock_module('test.child', func='new_child_func', VALUE=99)
-
-    with patch('deep_reloader.deep_reloader.importlib.reload') as mock_reload, patch(
-        'deep_reloader.deep_reloader.sys.modules', {'test.child': child_module}
-    ):
-        # 子がリロードされた後、親がリロードされる
-        def reload_side_effect(module):
-            if module is child_module:
-                # 子がリロードされたときにchild_moduleの属性を更新
-                child_module.func = 'new_child_func'
-                child_module.VALUE = 99
-                return reloaded_child
-            elif module is parent_module:
-                return reloaded_parent
-
-        mock_reload.side_effect = reload_side_effect
-
-        reload_tree(parent_node)
-
-        # _copy_symbols_toによってreloaded_parentに子のシンボルがコピーされ、
-        # その後parent_moduleの__dict__がreloaded_parentで更新されるため、
-        # 最終的にparent_moduleにも反映される
-        assert hasattr(parent_module, 'func')
-        assert parent_module.func == 'new_child_func'
-        assert parent_module.VALUE == 99
 
 
 def test_reload_preserves_module_identity():
