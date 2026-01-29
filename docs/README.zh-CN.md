@@ -26,10 +26,10 @@
     ├── __init__.py
     ├── _metadata.py
     ├── deep_reloader.py
+    ├── dependency_extractor.py
+    ├── domain.py
     ├── from_clause.py
     ├── import_clause.py
-    ├── module_node.py
-    ├── symbol_extractor.py
     ├── LICENSE
     ├── README.md
     └── tests/
