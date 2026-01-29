@@ -72,6 +72,7 @@ def test_resolve_relative_dot_only():
 def test_resolve_returns_none_on_import_error():
     """インポート失敗時にNoneを返すことを確認"""
     mock_base = Mock(spec=ModuleType)
+    mock_base.__name__ = 'test_module'
 
     with patch('importlib.import_module') as mock_import:
         mock_import.side_effect = ModuleNotFoundError('nonexistent')
