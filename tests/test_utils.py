@@ -1,56 +1,60 @@
 import importlib
 import sys
+import tempfile
 from pathlib import Path
 from typing import Dict, Optional, Set
-
-# テストで使用した一時ディレクトリのパスを記録
-_test_temp_dirs: Set[Path] = set()
 
 # ============================================================
 # テスト環境クリーンアップ（インフラ層）
 # ============================================================
 
 
-def clear_test_environment():
-    """一時ディレクトリのモジュールとパスをクリーンアップしてテスト分離を実現"""
-    # 記録されている一時ディレクトリ配下のモジュールを削除
+def cleanup_temp_modules() -> None:
+    """
+    一時ディレクトリ配下のモジュールとパスをクリーンアップ
+
+    Note:
+        pytestの一時ディレクトリ配下のすべてのモジュールを削除します。
+        これにより、異なるテストが同じパッケージ名を使っても干渉しません。
+    """
+    # pytestの一時ディレクトリのベースパスを取得
+    temp_base = Path(tempfile.gettempdir())
+
+    # 一時ディレクトリ配下のモジュールを削除
     modules_to_remove = []
     for module_name, module in list(sys.modules.items()):
-        # __file__属性がないモジュールはスキップ
         if not hasattr(module, '__file__') or not module.__file__:
             continue
 
         module_path = Path(module.__file__)
 
-        # 記録された一時ディレクトリのいずれかの配下にあるかチェック
-        for temp_dir in _test_temp_dirs:
-            if temp_dir in module_path.parents or module_path == temp_dir:
+        # 一時ディレクトリ配下にあるかチェック
+        try:
+            if temp_base in module_path.parents:
                 modules_to_remove.append(module_name)
-                break  # 見つかったら次のモジュールへ
+        except (ValueError, OSError):
+            # パス比較で問題が発生した場合はスキップ
+            continue
 
-    # 検出されたモジュールを削除
     for module_name in modules_to_remove:
         sys.modules.pop(module_name, None)
 
-    # 記録されている一時ディレクトリのパスをsys.pathから削除
+    # 一時ディレクトリのパスをsys.pathから削除
     paths_to_remove = []
     for path in sys.path:
-        path_obj = Path(path)
-
-        # 記録された一時ディレクトリのいずれかと一致するかチェック
-        for temp_dir in _test_temp_dirs:
-            if path_obj == temp_dir or temp_dir in path_obj.parents:
+        try:
+            path_obj = Path(path)
+            if temp_base in path_obj.parents or path_obj.parent == temp_base:
                 paths_to_remove.append(path)
-                break  # 見つかったら次のパスへ
+        except (ValueError, OSError):
+            # パス比較で問題が発生した場合はスキップ
+            continue
 
     for path in paths_to_remove:
         if path in sys.path:
             sys.path.remove(path)
 
     importlib.invalidate_caches()
-
-    # クリーンアップ後は記録をクリア
-    _test_temp_dirs.clear()
 
 
 # ============================================================
@@ -60,17 +64,15 @@ def clear_test_environment():
 
 def add_temp_path_to_sys(tmp_path: Path) -> None:
     """
-    一時ディレクトリをsys.pathに追加し、記録する
+    一時ディレクトリをsys.pathに追加
 
     Args:
         tmp_path: 一時ディレクトリのPath
 
     Note:
-        重複チェック付きでsys.pathに追加し、後でクリーンアップできるよう記録します。
+        重複チェック付きでsys.pathに追加します。
+        クリーンアップはpytest fixtureが自動的に行います。
     """
-    # 一時ディレクトリとして記録
-    _test_temp_dirs.add(tmp_path)
-
     tmp_path_str = str(tmp_path)
     if tmp_path_str not in sys.path:
         sys.path.insert(0, tmp_path_str)

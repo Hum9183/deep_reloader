@@ -15,6 +15,14 @@
 - **相对导入支持**：正确处理包内的相对导入
 - **循环引用支持**：正确重载 Python 中可运行的循环导入
 
+## 支持版本
+
+- Maya 2022
+- Maya 2023
+- Maya 2024
+- Maya 2025
+- Maya 2026
+
 ## 安装
 
 可以将包放置在 Python 路径中的任何位置。
@@ -26,10 +34,10 @@
     ├── __init__.py
     ├── _metadata.py
     ├── deep_reloader.py
+    ├── dependency_extractor.py
+    ├── domain.py
     ├── from_clause.py
     ├── import_clause.py
-    ├── module_info.py
-    ├── symbol_extractor.py
     ├── LICENSE
     ├── README.md
     └── tests/
@@ -97,7 +105,7 @@ pytest tests/ -q
 - Python 3.11.9+（在当前开发环境中已验证）
 - pytest 8.4.2+（运行测试所需）
 
-**注意**：以上是用于库测试和开发的环境。与 Maya 执行环境不同。支持的 Maya 版本尚未最终确定。
+**注意**：以上是用于库测试和开发的环境。与 Maya 执行环境不同。
 
 ## 限制事项与已知问题
 
@@ -133,6 +141,33 @@ isinstance(my_class, MyClass)  # False（my_class 是旧 MyClass 的实例，MyC
 - `from xxx import yyy` 样式
 - `from .xxx import yyy` 样式
 - `from . import yyy` 样式
+
+### 在 `__init__.py` 中未明确导入的模块在导入包时不会被检测到（按设计）
+
+由于 AST 分析会解析 `__init__.py` 代码，如果模块未在其中明确导入，则无法检测包下的模块。
+
+**示例**：
+
+文件结构：
+- `mypackage/__init__.py`（空）
+- `mypackage/utils.py`
+- `main.py`
+
+```python
+# main.py
+import mypackage
+
+# 重载包
+deep_reload(mypackage)
+mypackage.utils.some_function()  # utils 不会被重载
+```
+
+**解决方法**：直接重载模块
+```python
+# main.py
+from mypackage import utils
+deep_reload(utils)
+```
 
 ### 仅重载单个包（按设计）
 

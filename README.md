@@ -15,6 +15,14 @@ A Python library that analyzes module dependencies and performs recursive reload
 - **Relative Import Support**: Properly handles relative imports within packages
 - **Circular Import Support**: Correctly reloads circular imports that work in Python
 
+## Supported Versions
+
+- Maya 2022
+- Maya 2023
+- Maya 2024
+- Maya 2025
+- Maya 2026
+
 ## Installation
 
 The package can be placed anywhere in the Python path.
@@ -26,10 +34,10 @@ This README uses Maya's common scripts folder as an example.
     ├── __init__.py
     ├── _metadata.py
     ├── deep_reloader.py
+    ├── dependency_extractor.py
+    ├── domain.py
     ├── from_clause.py
     ├── import_clause.py
-    ├── module_info.py
-    ├── symbol_extractor.py
     ├── LICENSE
     ├── README.md
     └── tests/
@@ -97,7 +105,7 @@ pytest tests/ -q
 - Python 3.11.9+ (verified in current development environment)
 - pytest 8.4.2+ (required for running tests)
 
-**Note**: The above is the environment used for library testing and development. It differs from the Maya execution environment. Supported Maya versions are not yet finalized.
+**Note**: The above is the environment used for library testing and development. It differs from the Maya execution environment.
 
 ## Limitations and Known Issues
 
@@ -133,6 +141,33 @@ isinstance(my_class, MyClass)  # False (my_class is an instance of old MyClass, 
 - `from xxx import yyy` style
 - `from .xxx import yyy` style
 - `from . import yyy` style
+
+### Modules Not Explicitly Imported in `__init__.py` Are Not Detected When Importing the Package (By Design)
+
+Since AST analysis parses the `__init__.py` code, modules under the package cannot be detected if they are not explicitly imported there.
+
+**Example**:
+
+File structure:
+- `mypackage/__init__.py` (empty)
+- `mypackage/utils.py`
+- `main.py`
+
+```python
+# main.py
+import mypackage
+
+# Reload the package
+deep_reload(mypackage)
+mypackage.utils.some_function()  # utils is not reloaded
+```
+
+**Workaround**: Reload the module directly
+```python
+# main.py
+from mypackage import utils
+deep_reload(utils)
+```
 
 ### Single Package Reload Only (By Design)
 

@@ -1,21 +1,20 @@
-"""ModuleInfoクラスの単体テスト
+"""DependencyNodeクラスの単体テスト
 
-注意: ModuleInfo.reload()は複雑な処理のため、詳細な動作は統合テストで検証。
-ここでは基本的な初期化と構造のみをテスト。
+注意: DependencyNodeはデータ構造のみを責任とするため、基本的な初期化と構造のみをテスト。
+リロード処理は TreeReloader が担当し、統合テストで検証。
 """
 
 from types import ModuleType
 from unittest.mock import Mock
 
-from ...import_clause import ImportClause
-from ...module_info import ModuleInfo
+from ...domain import DependencyNode
 
 
 def test_init():
-    """ModuleInfoが正しく初期化されることを確認"""
+    """DependencyNodeが正しく初期化されることを確認"""
     mock_module = Mock(spec=ModuleType)
 
-    info = ModuleInfo(mock_module)
+    info = DependencyNode(mock_module)
 
     assert info.module is mock_module
     assert info.children == []
@@ -28,9 +27,9 @@ def test_children_management():
     mock_child1 = Mock(spec=ModuleType)
     mock_child2 = Mock(spec=ModuleType)
 
-    parent_info = ModuleInfo(mock_parent)
-    child_info1 = ModuleInfo(mock_child1)
-    child_info2 = ModuleInfo(mock_child2)
+    parent_info = DependencyNode(mock_parent)
+    child_info1 = DependencyNode(mock_child1)
+    child_info2 = DependencyNode(mock_child2)
 
     # 初期状態
     assert len(parent_info.children) == 0
@@ -48,15 +47,15 @@ def test_children_management():
 
 
 def test_symbols_management():
-    """シンボルの設定と取得ができることを確認"""
+    """symbolsの設定と取得ができることを確認"""
     mock_module = Mock(spec=ModuleType)
-    info = ModuleInfo(mock_module)
+    info = DependencyNode(mock_module)
 
     # 初期状態
     assert info.symbols is None
 
-    # ImportClauseを設定
-    symbols = ImportClause(['func1', 'func2', 'VALUE'])
+    # symbolsのリストを設定
+    symbols = ['func1', 'func2', 'VALUE']
     info.symbols = symbols
 
     assert info.symbols is symbols
@@ -70,10 +69,10 @@ def test_tree_structure():
     mock_child2 = Mock(spec=ModuleType)
     mock_grandchild = Mock(spec=ModuleType)
 
-    root_info = ModuleInfo(mock_root)
-    child_info1 = ModuleInfo(mock_child1)
-    child_info2 = ModuleInfo(mock_child2)
-    grandchild_info = ModuleInfo(mock_grandchild)
+    root_info = DependencyNode(mock_root)
+    child_info1 = DependencyNode(mock_child1)
+    child_info2 = DependencyNode(mock_child2)
+    grandchild_info = DependencyNode(mock_grandchild)
 
     # ツリー構造: root -> child1 -> grandchild
     #                  -> child2

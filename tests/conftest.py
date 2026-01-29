@@ -7,7 +7,7 @@ test_utils.pyの機能をラップしてpytest fixtureとして提供する。
 
 import pytest  # type: ignore  # noqa: F401
 
-from .test_utils import clear_test_environment
+from .test_utils import cleanup_temp_modules
 
 
 @pytest.fixture(autouse=True)
@@ -15,5 +15,5 @@ def auto_clear_test_environment():
     """pytest実行時の一時ディレクトリ自動クリア"""
     # sys.pathはpytestが実行場所に応じて適切に設定
     yield
-    # テスト後のクリア
-    clear_test_environment()
+    # テスト後、一時ディレクトリのモジュールをクリア
+    cleanup_temp_modules()

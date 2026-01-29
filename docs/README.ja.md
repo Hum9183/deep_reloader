@@ -15,6 +15,14 @@ Pythonモジュールの依存関係を解析して、再帰的にリロード�
 - **相対インポート対応**: パッケージ内の相対インポートを正しく処理
 - **循環参照対応**: Pythonで動作する循環インポートを正しくリロード
 
+## 動作環境
+
+- Maya 2022
+- Maya 2023
+- Maya 2024
+- Maya 2025
+- Maya 2026
+
 ## インストール
 
 Pythonパスが通っている場所であればどこでも配置可能です。
@@ -26,10 +34,10 @@ Pythonパスが通っている場所であればどこでも配置可能です�
     ├── __init__.py
     ├── _metadata.py
     ├── deep_reloader.py
+    ├── dependency_extractor.py
+    ├── domain.py
     ├── from_clause.py
     ├── import_clause.py
-    ├── module_info.py
-    ├── symbol_extractor.py
     ├── LICENSE
     ├── README.md
     └── tests/
@@ -97,7 +105,7 @@ pytest tests/ -q
 - Python 3.11.9+（現在の開発環境で検証済み）
 - pytest 8.4.2+（テスト実行に必須）
 
-**注意**: 上記はライブラリのテスト・開発で使用している環境です。Maya内での実行環境とは異なります。Mayaのサポートバージョンはまだ確定していません。
+**注意**: 上記はライブラリのテスト・開発で使用している環境です。Maya内での実行環境とは異なります。
 
 ## 制限事項・既知の問題
 
@@ -133,6 +141,34 @@ isinstance(my_class, MyClass)  # False（my_classは古いMyClassのインスタ
 - `from xxx import yyy` 形式
 - `from .xxx import yyy` 形式
 - `from . import yyy` 形式
+
+### そのパッケージの`__init__.py`で明示的にインポートされていないモジュールはパッケージをインポートしても検出されない（仕様）
+
+AST解析は`__init__.py`のコードを解析するため、そこで明示的にインポートされていない場合そのパッケージ配下のモジュールは検出できません。
+
+**例**:
+
+ファイル構造:
+- `mypackage/__init__.py` (中身は空)
+- `mypackage/utils.py`
+- `main.py`
+
+```python
+# main.py
+import mypackage
+
+# パッケージをリロード
+deep_reload(mypackage)
+mypackage.utils.some_function() # utilsはリロードされない
+```
+
+**回避策**: モジュールを直接リロードする
+```python
+# main.py
+from mypackage import utils
+deep_reload(utils)
+```
+
 
 ### 単一パッケージのみリロード（仕様）
 

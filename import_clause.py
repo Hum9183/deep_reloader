@@ -1,100 +1,84 @@
+"""import句の解決関数
+
+from xxx import yyy の yyy 部分（import句）を解決する関数群。
+"""
+
 from types import ModuleType
-from typing import Iterator, List, Optional, Tuple
+from typing import List
 
-from .from_clause import FromClause
+from .domain import Dependency
+from .from_clause import try_import_as_module
 
 
-class ImportClause:
-    """import句でインポートされる名前のリストを保持し、分類処理を担当するクラス
+def resolve(from_module: ModuleType, names: List[str]) -> List[str]:
+    """import句のシンボルを解決する（ワイルドカード展開を含む）
 
-    from xxx import yyy の yyy 部分（import句）の名前を保持し、
-    モジュール/アトリビュートの分類処理を行います。
+    Args:
+        from_module: from句で解決されたモジュール
+        names: import句の名前リスト（['*'] の場合はワイルドカード）
 
-    Attributes:
-        _names: import句でインポートされる名前の文字列リスト
-               例: from math import sin, cos, pi → ['sin', 'cos', 'pi']
-                   from maya.cmds import ls, select → ['ls', 'select']
-                   from mymodule import * → ['func1', 'Class1', 'CONST'] (展開後)
-                   from .utils import get_value as get_val → ['get_value'] (元の名前)
+    Returns:
+        解決されたシンボル名のリスト
 
-    Note:
-        as句（エイリアス）の情報は保持しません。
-        エイリアスは__dict__.update()で自動的に更新されるため不要です。
+    例:
+        - from math import sin, cos → ['sin', 'cos']
+        - from module import * → ['func1', 'Class1', 'CONST']（展開後）
     """
+    if names and names[0] == '*':
+        return _expand_wildcard(from_module)
+    return names
 
-    def __init__(self, names: List[str]) -> None:
-        self._names = names
 
-    def __iter__(self) -> Iterator[str]:
-        """名前をイテレート可能にする"""
-        return iter(self._names)
+def create_dependencies(from_module: ModuleType, base_module: ModuleType, symbols: List[str]) -> List[Dependency]:
+    """シンボルリストから依存関係を生成する
 
-    def __len__(self) -> int:
-        """名前の個数を返す"""
-        return len(self._names)
+    モジュールインポートの場合、2つの依存関係を生成:
+    1. サブモジュール自体への依存 (module, None)
+    2. 親パッケージへのアトリビュートとしての依存 (from_module, [name])
 
-    @classmethod
-    def expand_wildcard(cls, from_clause: FromClause) -> 'ImportClause':
-        """ワイルドカードインポートを展開してImportClauseを生成
+    これにより、`from package import submodule` の際に:
+    - submodule モジュールがリロードされる
+    - package.submodule というアトリビュートが設定される
 
-        Args:
-            from_clause: from句
+    Args:
+        from_module: from句で解決されたモジュール
+        base_module: 基準となるモジュール（import文が記述されているモジュール）
+        symbols: インポートされるシンボル名のリスト
 
-        Returns:
-            展開されたシンボル名から作成されたImportClause
-        """
-        # ワイルドカードインポート: from module import *
-        module = from_clause.module
-        if hasattr(module, '__all__'):
-            # __all__ がある場合: 明示的に定義された公開シンボルを使用
-            names = list(module.__all__)
+    Returns:
+        Dependency オブジェクトのリスト
+        symbols=None ならモジュール依存、symbols=[...] ならアトリビュート依存
+    """
+    results: List[Dependency] = []
+    attributes: List[str] = []
+
+    for name in symbols:
+        is_module, module = try_import_as_module(from_module, base_module, name)
+        if is_module:
+            # 1. サブモジュール自体への依存
+            results.append(Dependency(module, None))
+            # 2. 親パッケージのアトリビュートとしての依存
+            results.append(Dependency(from_module, [name]))
         else:
-            # __all__ がない場合: 特殊属性以外の全属性を使用
-            names = [
-                attr_name
-                for attr_name in module.__dict__
-                if not attr_name.startswith('__')  # __name__, __file__ 等の特殊属性を除外
-            ]
-        return cls(names)
+            attributes.append(name)
 
-    def to_dependencies(
-        self,
-        from_clause: FromClause,
-        level: int,
-        module_name: Optional[str],
-    ) -> List[Tuple[ModuleType, Optional['ImportClause']]]:
-        """インポートされる名前をモジュールかアトリビュートかに分類して依存関係を返す
+    # アトリビュートは同じfrom句から来るため、1つのDependencyにまとめる
+    if attributes:
+        results.append(Dependency(from_module, attributes))
 
-        Args:
-            from_clause: from句
-            level: 相対インポートのレベル (0=絶対, 1=".", 2="..", ...)
-            module_name: from句のモジュール名 (from . import yyy の場合はNone)
+    return results
 
-        Returns:
-            依存関係のリスト
-        """
-        # from . import yyy パターンかどうかを判定
-        is_relative_dot_only = level > 0 and module_name is None
 
-        import_clause_modules = []
-        import_clause_attrs = []
+def _expand_wildcard(module: ModuleType) -> List[str]:
+    """ワイルドカードインポートのシンボルリストを返す
 
-        for name in self._names:
-            is_module, module_symbol = from_clause.try_import_as_module(name, is_relative_dot_only)
-            if is_module:
-                import_clause_modules.append((module_symbol, name))
-            else:
-                import_clause_attrs.append(name)
+    Args:
+        module: ワイルドカード展開対象のモジュール
 
-        # 結果をまとめる
-        results = []
-        for module_symbol, module_name in import_clause_modules:
-            # モジュールインポートの場合、モジュール自体の依存関係を追加
-            results.append((module_symbol, None))
-            # さらに、from_clauseにmodule_nameを属性として設定するための依存関係も追加
-            results.append((from_clause.module, ImportClause([module_name])))
-
-        if import_clause_attrs:
-            results.append((from_clause.module, ImportClause(import_clause_attrs)))
-
-        return results
+    Returns:
+        展開されたシンボルリスト
+    """
+    if hasattr(module, '__all__'):
+        return list(module.__all__)
+    else:
+        return [name for name in module.__dict__ if not name.startswith('__')]
