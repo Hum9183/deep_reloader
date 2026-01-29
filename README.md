@@ -15,6 +15,14 @@ A Python library that analyzes module dependencies and performs recursive reload
 - **Relative Import Support**: Properly handles relative imports within packages
 - **Circular Import Support**: Correctly reloads circular imports that work in Python
 
+## Supported Versions
+
+- Maya 2022
+- Maya 2023
+- Maya 2024
+- Maya 2025
+- Maya 2026
+
 ## Installation
 
 The package can be placed anywhere in the Python path.
@@ -97,7 +105,7 @@ pytest tests/ -q
 - Python 3.11.9+ (verified in current development environment)
 - pytest 8.4.2+ (required for running tests)
 
-**Note**: The above is the environment used for library testing and development. It differs from the Maya execution environment. Supported Maya versions are not yet finalized.
+**Note**: The above is the environment used for library testing and development. It differs from the Maya execution environment.
 
 ## Limitations and Known Issues
 
