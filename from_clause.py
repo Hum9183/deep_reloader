@@ -4,8 +4,11 @@ from xxx import yyy の xxx 部分（from句）を解決する関数群。
 """
 
 import importlib
+import logging
 from types import ModuleType
 from typing import Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 def resolve(base_module: ModuleType, level: int, module_name: Optional[str]) -> Optional[ModuleType]:
@@ -73,7 +76,8 @@ def _try_import_submodule(from_module: ModuleType, name: str) -> Optional[Module
     try:
         full_name = f'{from_module.__name__}.{name}'
         return importlib.import_module(full_name)
-    except (ModuleNotFoundError, ImportError):
+    except (ModuleNotFoundError, ImportError) as e:
+        logger.debug(f'Failed to import submodule {from_module.__name__}.{name}: {type(e).__name__}: {e}')
         return None
 
 
@@ -92,7 +96,10 @@ def _import(base_module: ModuleType, level: int, module_name: Optional[str]) -> 
         else:
             # 絶対インポート(from xxx import yyy)の場合
             return importlib.import_module(module_name)
-    except (ModuleNotFoundError, ImportError):
+    except (ModuleNotFoundError, ImportError) as e:
+        logger.debug(
+            f'Failed to import module (base={base_module.__name__}, level={level}, module={module_name}): {type(e).__name__}: {e}'
+        )
         return None
 
 
@@ -121,7 +128,10 @@ def _import_relative(base_module: ModuleType, level: int, module_name: str) -> O
 
         target_name = f'{base_name}.{module_name}'
         return importlib.import_module(target_name)
-    except (ModuleNotFoundError, ImportError):
+    except (ModuleNotFoundError, ImportError) as e:
+        logger.debug(
+            f'Failed to import relative module (base={base_module.__name__}, level={level}, module={module_name}): {type(e).__name__}: {e}'
+        )
         return None
 
 
@@ -148,5 +158,8 @@ def _import_relative_parent_package(base_module: ModuleType, level: int) -> Opti
         else:
             parent_name = base_module.__name__.rsplit('.', actual_level)[0]
             return importlib.import_module(parent_name)
-    except (ModuleNotFoundError, ImportError, ValueError):
+    except (ModuleNotFoundError, ImportError, ValueError) as e:
+        logger.debug(
+            f'Failed to import parent package (base={base_module.__name__}, level={level}): {type(e).__name__}: {e}'
+        )
         return None

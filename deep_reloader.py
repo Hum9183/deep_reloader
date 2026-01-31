@@ -4,7 +4,6 @@ import shutil
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import List
 
 from .dependency_extractor import DependencyExtractor
 from .domain import DependencyNode
@@ -138,16 +137,16 @@ def reload_tree(node: DependencyNode, visited_modules: set = None) -> None:
     DependencyNodeで構成された依存ツリーを深さ優先探索でリロードします。
 
     処理の流れ:
-    1. importlib.reload()で新しいモジュールオブジェクト(reloaded_module)を作成
-    2. 子モジュールを再帰的にリロード
-    3. 子のインポートされた名前をreloaded_moduleにコピー（関数の__globals__が正しく参照できるように）
-    4. node.module.__dict__を更新（削除された属性を除去、新しい属性を追加・上書き）
-    5. sys.modules[name]にnode.moduleを登録（reloaded_moduleではなく）
+    1. 子モジュールを再帰的にリロード（子が先に完了する必要がある）
+    2. importlib.reload()で新しいモジュールオブジェクト(reloaded_module)を作成
+    3. node.module.__dict__を更新（削除された属性を除去、新しい属性を追加・上書き）
+    4. sys.modules[name]にnode.moduleを登録（reloaded_moduleではなく）
 
     重要な設計思想:
     - node.moduleのオブジェクトIDを保持することで、既存の参照を有効に保つ
     - reloaded_moduleは一時的な作業用オブジェクトとして使用
     - __dict__を更新することで、オブジェクトを置き換えずに中身だけを更新
+    - importlib.reload()が自動的にimport文を再実行するため、from-importしたシンボルも最新になる
 
     Args:
         node: リロード対象のノード
@@ -171,14 +170,8 @@ def reload_tree(node: DependencyNode, visited_modules: set = None) -> None:
 
     # importlib.reload()を使用してリロード
     # これにより、sys.modulesから削除せずに安全にリロードできる
+    # また、from .child import xxx などのimport文が再実行され、最新の値が自動的に設定される
     reloaded_module = importlib.reload(node.module)
-
-    # 子のリロード後、from-importで取得した名前を新しいモジュールにコピー
-    # （reloaded_moduleの関数の__globals__に正しい値を設定するため）
-    for child in node.children:
-        if child.symbols is not None:
-            source_module = sys.modules.get(child.module.__name__, child.module)
-            _copy_symbols_to(child.symbols, source_module, reloaded_module)
 
     # リロード前のモジュール(node.module)にあって、リロード後のモジュール(reloaded_module)に存在しなくなった属性を削除する
     old_attrs = set(node.module.__dict__.keys())
@@ -194,18 +187,3 @@ def reload_tree(node: DependencyNode, visited_modules: set = None) -> None:
     sys.modules[name] = node.module
 
     logger.debug(f'RELOADED {name}')
-
-
-def _copy_symbols_to(symbols: List[str], source_module: ModuleType, target_module: ModuleType) -> None:
-    """source_moduleからtarget_moduleへsymbolsで指定された名前をコピーする
-
-    Args:
-        symbols: コピーする名前のリスト
-        source_module: コピー元のモジュール
-        target_module: コピー先のモジュール
-    """
-    for name in symbols:
-        if hasattr(source_module, name):
-            value = getattr(source_module, name)
-            setattr(target_module, name, value)
-            logger.debug(f'{target_module.__name__}.{name} ← {source_module.__name__}.{name} ({value!r})')

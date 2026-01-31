@@ -76,7 +76,8 @@ class DependencyExtractor:
         try:
             source = inspect.getsource(self._module)
             return ast.parse(source)
-        except (OSError, TypeError, SyntaxError):
+        except (OSError, TypeError, SyntaxError) as e:
             # 組み込みモジュール(os, sys等)、バイナリ拡張(.pyd/.so)、
             # Maya内部モジュール(maya.cmds等)はソースコードが取得できないためNoneを返す
+            logger.debug(f'Failed to parse AST for {self._module.__name__}: {type(e).__name__}: {e}')
             return None
