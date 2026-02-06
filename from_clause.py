@@ -54,16 +54,20 @@ def try_import_as_module(
         name: インポートする名前
 
     Returns:
-        (is_module, module): is_moduleがTrueならモジュール、Falseならアトリビュート
+        Tuple[bool, Optional[ModuleType]]:
+            - (True, module): nameがモジュールの場合
+            - (False, None): nameがアトリビュート（関数/クラス/変数）の場合
     """
     # サブモジュールとしてインポートを試行
-    module_candidate = _try_import_submodule(from_module, name)
+    submodule: Optional[ModuleType] = _try_import_as_submodule(from_module, name)
+    # インポート失敗、または自分自身のモジュールへの参照の場合はアトリビュートと判定
+    if (submodule is None) or (submodule is base_module):
+        return False, None
+    else:
+        return True, submodule
 
-    is_module = module_candidate is not None and module_candidate is not base_module
-    return (is_module, module_candidate if is_module else None)
 
-
-def _try_import_submodule(from_module: ModuleType, name: str) -> Optional[ModuleType]:
+def _try_import_as_submodule(from_module: ModuleType, name: str) -> Optional[ModuleType]:
     """from句のモジュールから指定された名前をサブモジュールとしてインポートを試行
 
     Args:
