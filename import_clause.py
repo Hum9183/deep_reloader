@@ -6,19 +6,19 @@ from xxx import yyy の yyy 部分（import句）を解決する関数群。
 from types import ModuleType
 from typing import List
 
+from . import from_clause
 from .domain import Dependency
-from .from_clause import try_import_as_module
 
 
-def resolve(from_module: ModuleType, names: List[str]) -> List[str]:
-    """import句のシンボルを解決する（ワイルドカード展開を含む）
+def expand_if_wildcard(from_module: ModuleType, names: List[str]) -> List[str]:
+    """ワイルドカードの場合はシンボルを展開する
 
     Args:
         from_module: from句で解決されたモジュール
         names: import句の名前リスト（['*'] の場合はワイルドカード）
 
     Returns:
-        解決されたシンボル名のリスト
+        展開されたシンボル名のリスト
 
     例:
         - from math import sin, cos → ['sin', 'cos']
@@ -26,7 +26,8 @@ def resolve(from_module: ModuleType, names: List[str]) -> List[str]:
     """
     if names and names[0] == '*':
         return _expand_wildcard(from_module)
-    return names
+    else:
+        return names
 
 
 def create_dependencies(from_module: ModuleType, base_module: ModuleType, symbols: List[str]) -> List[Dependency]:
@@ -53,7 +54,7 @@ def create_dependencies(from_module: ModuleType, base_module: ModuleType, symbol
     attributes: List[str] = []
 
     for name in symbols:
-        is_module, module = try_import_as_module(from_module, base_module, name)
+        is_module, module = from_clause.try_import_as_module(from_module, base_module, name)
         if is_module:
             # 1. サブモジュール自体への依存
             results.append(Dependency(module, None))
@@ -81,4 +82,8 @@ def _expand_wildcard(module: ModuleType) -> List[str]:
     if hasattr(module, '__all__'):
         return list(module.__all__)
     else:
-        return [name for name in module.__dict__ if not name.startswith('__')]
+        result = []
+        for name in module.__dict__:
+            if not name.startswith('__'):
+                result.append(name)
+        return result

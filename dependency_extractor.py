@@ -61,7 +61,7 @@ class DependencyExtractor:
 
         # import句のシンボルを解決（ワイルドカード展開含む）
         names = [alias.name for alias in node.names]
-        symbols = import_clause.resolve(from_module, names)
+        symbols = import_clause.expand_if_wildcard(from_module, names)
 
         # 依存関係を生成
         dependencies = import_clause.create_dependencies(from_module, self._module, symbols)
